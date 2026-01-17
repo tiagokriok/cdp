@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(test:*)",
+      "Bash(go version:*)",
+      "Bash(go mod init:*)",
+      "Bash(go get:*)",
+      "Bash(go test:*)",
+      "Bash(go build:*)",
+      "Bash(./cdp help:*)",
+      "Bash(./cdp init:*)",
+      "Bash(./cdp create:*)",
+      "Bash(./cdp list:*)",
+      "Bash(./cdp work:*)",
+      "Bash(./cdp current:*)",
+      "Bash(./cdp version)",
+      "Bash(chmod:*)",
+      "Bash(bash scripts/e2e_test.sh:*)",
+      "Bash(./cdp delete:*)",
+      "Bash(./cdp test-current:*)",
+      "Bash(go fmt:*)",
+      "Bash(go vet:*)",
+      "Bash(make build:*)",
+      "Bash(./cdp info:*)",
+      "Bash(./cdp test-styled:*)",
+      "Bash(go tool cover:*)"
+    ]
+  }
+}
