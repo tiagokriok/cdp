@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"strings"
 
-	"github.com/tiagokriok/cdp/internal/cli"
+	"github.com/tiagokriok/cdp/internal/cli/cmd"
 )
 
 var (
@@ -13,46 +13,43 @@ var (
 )
 
 func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
+	cmd.Version = Version
+	handleImplicitSwitch()
+	cmd.Execute()
 }
 
-func run() error {
-	// Parse command-line arguments
-	parsed, err := cli.Parse(os.Args[1:])
-	if err != nil {
-		return err
+// handleImplicitSwitch checks if the user is trying to run a switch command
+// without explicitly typing 'switch'. e.g., `cdp work`.
+// If so, it injects the 'switch' command into the arguments for Cobra.
+func handleImplicitSwitch() {
+	if len(os.Args) <= 1 {
+		return
 	}
 
-	// Route to appropriate command handler
-	switch parsed.Command {
-	case "init":
-		return cli.HandleInit()
-
-	case "create":
-		return cli.HandleCreate(parsed.ProfileName, parsed.Description)
-
-	case "list":
-		return cli.HandleList()
-
-	case "delete":
-		return cli.HandleDelete(parsed.ProfileName)
-
-	case "current":
-		return cli.HandleCurrent()
-
-	case "switch":
-		return cli.HandleSwitch(parsed.ProfileName, parsed.ClaudeFlags, parsed.NoRun)
-
-	case "help":
-		return cli.HandleHelp()
-
-	case "version":
-		return cli.HandleVersion(Version)
-
-	default:
-		return fmt.Errorf("unknown command: %s", parsed.Command)
+	// List of all user-facing commands and their aliases.
+	// This determines if the first argument is a command or a profile name.
+	knownCommands := []string{
+		"init", "create", "list", "ls", "delete", "rm",
+		"current", "info", "help", "version", "completion",
 	}
+
+	firstArg := os.Args[1]
+
+	// If the first argument is a flag, it's not a profile name.
+	if strings.HasPrefix(firstArg, "-") {
+		return
+	}
+
+	// If the first argument is a known command, it's not a profile name.
+	for _, known := range knownCommands {
+		if firstArg == known {
+			return
+		}
+	}
+
+	// If we're here, the first argument is not a flag and not a known command.
+	// We assume it's a profile name for the 'switch' command.
+	// We inject 'switch' into the os.Args slice.
+	originalArgs := os.Args
+	os.Args = append([]string{originalArgs[0], "switch"}, originalArgs[1:]...)
 }

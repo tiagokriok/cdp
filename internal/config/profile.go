@@ -26,6 +26,9 @@ type ProfileMetadata struct {
 	CreatedAt   time.Time `json:"createdAt"`
 	LastUsed    time.Time `json:"lastUsed,omitempty"`
 	Description string    `json:"description,omitempty"`
+	UsageCount  int       `json:"usageCount"`
+	Template    string    `json:"template,omitempty"`
+	CustomFlags []string  `json:"customFlags,omitempty"`
 }
 
 // Profile represents a Claude Code profile
@@ -81,6 +84,7 @@ func (pm *ProfileManager) CreateProfile(name, description string) error {
 	metadata := ProfileMetadata{
 		CreatedAt:   time.Now(),
 		Description: description,
+		UsageCount:  0, // Initialize usage count
 	}
 
 	if err := pm.saveMetadata(profilePath, metadata); err != nil {
@@ -215,6 +219,7 @@ func (pm *ProfileManager) UpdateLastUsed(name string) error {
 	}
 
 	profile.Metadata.LastUsed = time.Now()
+	profile.Metadata.UsageCount++
 	return pm.saveMetadata(profile.Path, profile.Metadata)
 }
 
