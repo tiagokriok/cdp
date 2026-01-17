@@ -90,6 +90,20 @@ func (am *AliasManager) GetShellType() ShellType {
 	return am.shellType
 }
 
+// GetShellName returns the shell type as a string
+func (am *AliasManager) GetShellName() string {
+	switch am.shellType {
+	case Bash:
+		return "bash"
+	case Zsh:
+		return "zsh"
+	case Fish:
+		return "fish"
+	default:
+		return "unknown"
+	}
+}
+
 // GetRCFile returns the path to the RC file
 func (am *AliasManager) GetRCFile() string {
 	return am.rcFile

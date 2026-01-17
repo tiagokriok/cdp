@@ -101,6 +101,59 @@ Users can import existing Claude Code configurations into CDP using `cdp create 
 - Works with `--description` / `-d` flag and positional description argument
 - Description flag takes precedence over positional argument
 
+### Interactive Alias Installation
+
+The interactive alias wizard (`cdp alias install`) uses Bubble Tea TUI for a guided shell alias setup experience.
+
+**User Flow:**
+```
+User runs: cdp alias install
+    ↓
+TUI Profile Selection (arrow keys/j-k, Enter to select)
+    ↓
+Text Input for Alias Name (with smart suggestions)
+    ↓
+Validation Check (reserved commands, duplicates, format)
+    ↓
+Review & Confirm Installation
+    ↓
+Install to RC file (.bashrc, .zshrc, or config.fish)
+```
+
+**Implementation** (`internal/cli/interactive_alias.go`):
+
+**State Machine:**
+- `selectProfileStep`: Navigate profiles, skip already-aliased ones, select "Done" when finished
+- `enterAliasStep`: Text input with real-time validation, smart suggestions
+- `reviewStep`: Confirm before installation
+
+**Core Components:**
+- `aliasWizardModel`: Bubble Tea model managing wizard state
+- `validateAlias()`: Format check, reserved command check, duplicate check
+- `generateSafeSuggestion()`: Creates safe suggestions (cw, cwo, cwo, cwork, or profile name), skipping reserved commands and duplicates
+- `RunAliasWizard()`: Loads profiles, launches TUI, installs confirmed aliases
+
+**Validation System:**
+
+Reserved commands list includes common shell utilities: `cd`, `ls`, `cp`, `mv`, `rm`, `cat`, `grep`, `sed`, `awk`, `git`, `docker`, `npm`, `sudo`, `vim`, `nano`, `echo`, `pwd`, `chmod`, `chown`, `find`, `make`, `go`, `python`, `node`, `yarn`, `curl`, `wget`, `ssh`, `scp`, and more.
+
+Alias format: `^[a-zA-Z0-9_-]+$` (max 50 chars)
+
+**Smart Suggestion Algorithm:**
+1. Try `c` + first letter (`cw` for work)
+2. Try `c` + first 2 letters (`cwo` for work-old)
+3. Try `c` + first 3 letters (`cwor` for work-old-r)
+4. Try `c` + full name (`cwork`)
+5. Fallback to profile name
+
+Each candidate is checked against:
+- Reserved commands list
+- Already-used aliases (across selected profiles)
+
+**Key Files:**
+- `internal/cli/interactive_alias.go` (~340 lines): TUI wizard implementation
+- `pkg/aliases/shell.go`: Added `GetShellName()` method
+
 ### Parser Design
 
 CDP now leverages the [Cobra](https://cobra.dev/) CLI framework for robust argument parsing and command dispatching.

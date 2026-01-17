@@ -210,18 +210,32 @@ cdp templates show restrictive
 Manage shell aliases for quick profile switching.
 
 **Subcommands:**
-- `cdp alias install`: Install shell aliases for all profiles
+- `cdp alias install`: Interactively set up aliases with custom names
 - `cdp alias uninstall`: Remove all CDP aliases from shell config
 - `cdp alias list`: List currently installed aliases
 
+**Interactive Installation:**
+
+The alias wizard guides you through setting up aliases:
+1. Select profiles to create aliases for (arrow keys/j-k navigation)
+2. Enter custom alias names with smart suggestions
+3. Get validation warnings for conflicts with shell commands
+4. Review and confirm installation
+
 Examples:
 ```bash
-# Install aliases (adds to .bashrc/.zshrc/config.fish)
+# Install aliases interactively
 cdp alias install
 
+# Follow the prompts:
+# - Select a profile
+# - Enter custom alias name (or press Enter for suggestion)
+# - Select another profile or "Done"
+# - Review and confirm
+
 # After installation, use aliases directly:
-# cdp-work is equivalent to "cdp work"
-cdp-work --continue
+mywork --continue    # if aliased as "mywork"
+cpersonal            # if aliased as "cpersonal"
 
 # List installed aliases
 cdp alias list
@@ -229,6 +243,12 @@ cdp alias list
 # Remove all aliases
 cdp alias uninstall
 ```
+
+**Smart Features:**
+- Suggestions exclude conflicts with shell commands (cp, ls, git, etc.)
+- Real-time validation prevents duplicate or invalid aliases
+- Supports custom alias names (not auto-generated)
+- Works with bash, zsh, and fish shells
 
 ### `cdp backup`
 Backup and restore profiles.

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/config"
+	"github.com/tiagokriok/cdp/internal/cli"
 	"github.com/tiagokriok/cdp/internal/ui"
 	"github.com/tiagokriok/cdp/pkg/aliases"
 )
@@ -24,55 +24,13 @@ Commands:
 // aliasInstallCmd represents the alias install command
 var aliasInstallCmd = &cobra.Command{
 	Use:   "install",
-	Short: "Install shell aliases for all profiles",
-	Long:  `Installs shell aliases to your shell RC file (.bashrc, .zshrc, or config.fish).`,
+	Short: "Install shell aliases interactively",
+	Long: `Interactively set up shell aliases for your profiles.
+
+Select profiles and customize alias names with validation to prevent
+conflicts with existing shell commands.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load()
-		if err != nil {
-			return fmt.Errorf("CDP not initialized. Run 'cdp init' first")
-		}
-
-		pm := config.NewProfileManager(cfg)
-		profiles, err := pm.ListProfiles()
-		if err != nil {
-			return fmt.Errorf("failed to list profiles: %w", err)
-		}
-
-		if len(profiles) == 0 {
-			ui.Info("No profiles found. Create some profiles first.")
-			return nil
-		}
-
-		// Get profile names
-		profileNames := make([]string, len(profiles))
-		for i, p := range profiles {
-			profileNames[i] = p.Name
-		}
-
-		// Generate aliases
-		aliasMap := aliases.GenerateDefaultAliases(profileNames)
-
-		// Install
-		am, err := aliases.New()
-		if err != nil {
-			return fmt.Errorf("failed to detect shell: %w", err)
-		}
-
-		if err := am.InstallAliases(aliasMap); err != nil {
-			return fmt.Errorf("failed to install aliases: %w", err)
-		}
-
-		ui.Success("Shell aliases installed!")
-		fmt.Printf("RC file: %s\n", am.GetRCFile())
-		fmt.Printf("Shell: %s\n", am.GetShellType())
-		fmt.Println("\nInstalled aliases:")
-		for profile, shortcut := range aliasMap {
-			fmt.Printf("  %s -> cdp %s\n", shortcut, profile)
-		}
-		fmt.Println("\nRestart your shell or run:")
-		fmt.Printf("  source %s\n", am.GetRCFile())
-
-		return nil
+		return cli.RunAliasWizard()
 	},
 }
 
