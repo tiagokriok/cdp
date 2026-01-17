@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/tiagokriok/cdp/internal/config"
 	"github.com/tiagokriok/cdp/internal/executor"
+	"github.com/tiagokriok/cdp/internal/ui"
 )
 
 // HandleInit initializes the CDP configuration
 func HandleInit() error {
 	if config.Exists() {
-		fmt.Println("CDP is already initialized.")
+		ui.Info("CDP is already initialized.")
 		fmt.Println("Configuration directory:", getConfigDirOrEmpty())
 		fmt.Println("Profiles directory:", getProfilesDirOrEmpty())
 		return nil
@@ -24,7 +24,7 @@ func HandleInit() error {
 		return fmt.Errorf("failed to initialize CDP: %w", err)
 	}
 
-	fmt.Println("CDP initialized successfully!")
+	ui.Success("CDP initialized successfully!")
 	fmt.Println("Configuration directory:", getConfigDirOrEmpty())
 	fmt.Println("Profiles directory:", getProfilesDirOrEmpty())
 	fmt.Println("\nGet started by creating a profile:")
@@ -46,7 +46,7 @@ func HandleCreate(name, description string) error {
 		return fmt.Errorf("failed to create profile: %w", err)
 	}
 
-	fmt.Printf("Profile '%s' created successfully!\n", name)
+	ui.Success(fmt.Sprintf("Profile '%s' created successfully!", name))
 	if description != "" {
 		fmt.Printf("Description: %s\n", description)
 	}
@@ -70,42 +70,8 @@ func HandleList() error {
 		return fmt.Errorf("failed to list profiles: %w", err)
 	}
 
-	if len(profiles) == 0 {
-		fmt.Println("No profiles found.")
-		fmt.Println("\nCreate a profile:")
-		fmt.Println("  cdp create <name> [description]")
-		return nil
-	}
-
-	fmt.Printf("Found %d profile(s):\n\n", len(profiles))
-
 	currentProfile := cfg.GetCurrentProfile()
-
-	for _, profile := range profiles {
-		// Mark current profile
-		marker := " "
-		if profile.Name == currentProfile {
-			marker = "*"
-		}
-
-		fmt.Printf("%s %s\n", marker, profile.Name)
-
-		if profile.Metadata.Description != "" {
-			fmt.Printf("  Description: %s\n", profile.Metadata.Description)
-		}
-
-		fmt.Printf("  Created: %s\n", formatTime(profile.Metadata.CreatedAt))
-
-		if !profile.Metadata.LastUsed.IsZero() {
-			fmt.Printf("  Last used: %s\n", formatTime(profile.Metadata.LastUsed))
-		}
-
-		fmt.Println()
-	}
-
-	if currentProfile != "" {
-		fmt.Printf("Current profile: %s\n", currentProfile)
-	}
+	ui.PrintProfileList(profiles, currentProfile)
 
 	return nil
 }
@@ -134,7 +100,7 @@ func HandleDelete(name string) error {
 
 	response = strings.TrimSpace(strings.ToLower(response))
 	if response != "y" && response != "yes" {
-		fmt.Println("Deletion cancelled.")
+		ui.Info("Deletion cancelled.")
 		return nil
 	}
 
@@ -142,7 +108,7 @@ func HandleDelete(name string) error {
 		return fmt.Errorf("failed to delete profile: %w", err)
 	}
 
-	fmt.Printf("Profile '%s' deleted successfully.\n", name)
+	ui.Success(fmt.Sprintf("Profile '%s' deleted successfully.", name))
 	return nil
 }
 
@@ -156,32 +122,43 @@ func HandleCurrent() error {
 	currentProfile := cfg.GetCurrentProfile()
 
 	if currentProfile == "" {
-		fmt.Println("No profile is currently active.")
+		ui.Info("No profile is currently active.")
 		fmt.Println("\nSwitch to a profile:")
 		fmt.Println("  cdp <profile-name>")
 		return nil
 	}
-
-	fmt.Printf("Current profile: %s\n", currentProfile)
 
 	// Get profile details
 	pm := config.NewProfileManager(cfg)
 	profile, err := pm.GetProfile(currentProfile)
 	if err != nil {
 		// Profile might have been deleted
-		fmt.Println("(Warning: Profile directory not found)")
+		ui.Warn("Profile directory not found")
 		return nil
 	}
 
-	if profile.Metadata.Description != "" {
-		fmt.Printf("Description: %s\n", profile.Metadata.Description)
+	ui.PrintProfileInfo(profile, true)
+
+	return nil
+}
+
+// HandleInfo shows detailed information about a specific profile
+func HandleInfo(name string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
 	}
 
-	fmt.Printf("Location: %s\n", profile.Path)
-
-	if !profile.Metadata.LastUsed.IsZero() {
-		fmt.Printf("Last used: %s\n", formatTime(profile.Metadata.LastUsed))
+	pm := config.NewProfileManager(cfg)
+	profile, err := pm.GetProfile(name)
+	if err != nil {
+		return fmt.Errorf("profile '%s' does not exist", name)
 	}
+
+	currentProfile := cfg.GetCurrentProfile()
+	isCurrent := profile.Name == currentProfile
+
+	ui.PrintProfileInfo(profile, isCurrent)
 
 	return nil
 }
@@ -206,43 +183,29 @@ func HandleSwitch(name string, claudeFlags []string, noRun bool) error {
 		return fmt.Errorf("profile '%s' is corrupted: %w", name, err)
 	}
 
-	// Update current profile
-	if err := cfg.SetCurrentProfile(name); err != nil {
-		return fmt.Errorf("failed to set current profile: %w", err)
+	// Update current profile by setting field and saving explicitly
+	cfg.CurrentProfile = name
+	if err := cfg.Save(); err != nil {
+		return fmt.Errorf("failed to save config with new profile: %w", err)
 	}
 
 	// Update last used timestamp
 	if err := pm.UpdateLastUsed(name); err != nil {
 		// Non-fatal error, just log it
-		fmt.Fprintf(os.Stderr, "Warning: failed to update last used timestamp: %v\n", err)
+		ui.Warn(fmt.Sprintf("Failed to update last used timestamp: %v", err))
 	}
 
-	fmt.Printf("Switched to profile: %s\n", name)
+	ui.Success(fmt.Sprintf("Switched to profile: %s", name))
 
 	if noRun {
-		fmt.Println("Use 'claude' to start Claude Code with this profile.")
+		ui.Info("Use 'claude' to start Claude Code with this profile.")
 		return nil
 	}
 
 	// Run Claude Code
-	fmt.Println("Starting Claude Code...")
+	ui.Info("Starting Claude Code...")
 	exec := executor.NewExecutor()
 	return exec.Run(profile.Path, claudeFlags)
-}
-
-// HandleHelp shows help information
-func HandleHelp() error {
-	fmt.Println(GetUsage())
-	return nil
-}
-
-// HandleVersion shows version information
-func HandleVersion(version string) error {
-	if version == "" {
-		version = "dev"
-	}
-	fmt.Printf("CDP (Claude Profile Switcher) version %s\n", version)
-	return nil
 }
 
 // Helper functions
@@ -268,34 +231,4 @@ func getProfilesDirOrEmpty() string {
 		return ""
 	}
 	return dir
-}
-
-func formatTime(t time.Time) string {
-	now := time.Now()
-	diff := now.Sub(t)
-
-	switch {
-	case diff < time.Minute:
-		return "just now"
-	case diff < time.Hour:
-		minutes := int(diff.Minutes())
-		if minutes == 1 {
-			return "1 minute ago"
-		}
-		return fmt.Sprintf("%d minutes ago", minutes)
-	case diff < 24*time.Hour:
-		hours := int(diff.Hours())
-		if hours == 1 {
-			return "1 hour ago"
-		}
-		return fmt.Sprintf("%d hours ago", hours)
-	case diff < 7*24*time.Hour:
-		days := int(diff.Hours() / 24)
-		if days == 1 {
-			return "1 day ago"
-		}
-		return fmt.Sprintf("%d days ago", days)
-	default:
-		return t.Format("2006-01-02")
-	}
 }

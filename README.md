@@ -6,8 +6,9 @@ A fast, lightweight CLI tool for managing multiple Claude Code profiles with sea
 
 CDP solves the problem of managing different Claude Code configurations for work, personal projects, or multiple organizations. Switch between profiles instantly without manual configuration management.
 
-## Features (MVP v0.1.0)
+## Features (v0.2.0)
 
+- Interactive TUI menu for profile selection
 - Create, list, and delete profiles
 - Switch between profiles instantly
 - Execute Claude Code with the correct environment
@@ -79,6 +80,15 @@ cdp delete work
 ### `cdp current`
 Show the currently active profile.
 
+### `cdp info [profile-name]`
+Show detailed information about a profile. If no profile name is provided, it shows information for the current active profile.
+
+Example:
+```bash
+cdp info work
+cdp info
+```
+
 ### `cdp <profile> [flags...]`
 Switch to the specified profile and run Claude Code with any provided flags.
 
@@ -103,7 +113,7 @@ Profiles are stored in `~/.claude-profiles/`:
 ├── work/
 │   ├── .claude.json       # Claude Code OAuth config
 │   ├── settings.json      # Claude settings
-│   └── .metadata.json     # CDP metadata
+│   └── .metadata.json     # CDP metadata (createdAt, lastUsed, description, usageCount, template, customFlags)
 └── personal/
     ├── .claude.json
     ├── settings.json
@@ -150,9 +160,9 @@ make coverage
 See [PLAN.md](PLAN.md) for the full implementation roadmap.
 
 ### Tier 2: Enhanced UX (v0.2.0)
-- Interactive TUI menu
-- Styled output with colors
-- Profile info command
+- ✅ Interactive TUI menu
+- ✅ Styled output with colors
+- ✅ Profile info command
 
 ### Tier 3: Advanced Features (v1.0.0)
 - Profile templates
