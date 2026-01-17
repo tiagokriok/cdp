@@ -31,6 +31,7 @@ func handleImplicitSwitch() {
 	knownCommands := []string{
 		"init", "create", "list", "ls", "delete", "rm",
 		"current", "info", "help", "version", "completion",
+		"templates", "alias", "switch", "clone", "rename", "diff", "backup",
 	}
 
 	firstArg := os.Args[1]

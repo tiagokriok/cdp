@@ -1,0 +1,260 @@
+package aliases
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestNew(t *testing.T) {
+	// Skip if SHELL is not set
+	if os.Getenv("SHELL") == "" {
+		t.Skip("SHELL environment variable not set")
+	}
+
+	am, err := New()
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	if am.shellType == "" {
+		t.Error("shellType should not be empty")
+	}
+
+	if am.rcFile == "" {
+		t.Error("rcFile should not be empty")
+	}
+}
+
+func TestNewWithShell(t *testing.T) {
+	tests := []struct {
+		shellType     ShellType
+		expectedFile  string
+	}{
+		{Bash, ".bashrc"},
+		{Zsh, ".zshrc"},
+		{Fish, filepath.Join(".config", "fish", "config.fish")},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.shellType), func(t *testing.T) {
+			am, err := NewWithShell(tt.shellType)
+			if err != nil {
+				t.Fatalf("NewWithShell(%s) error = %v", tt.shellType, err)
+			}
+
+			if am.shellType != tt.shellType {
+				t.Errorf("shellType = %s, want %s", am.shellType, tt.shellType)
+			}
+
+			if !strings.HasSuffix(am.rcFile, tt.expectedFile) {
+				t.Errorf("rcFile = %s, want suffix %s", am.rcFile, tt.expectedFile)
+			}
+		})
+	}
+}
+
+func TestGenerateDefaultAliases(t *testing.T) {
+	profiles := []string{"work", "personal", "freelance"}
+	aliases := GenerateDefaultAliases(profiles)
+
+	if len(aliases) != 3 {
+		t.Errorf("GenerateDefaultAliases() returned %d aliases, want 3", len(aliases))
+	}
+
+	// Check each profile has an alias
+	for _, profile := range profiles {
+		if _, ok := aliases[profile]; !ok {
+			t.Errorf("Missing alias for profile %s", profile)
+		}
+	}
+
+	// Check aliases are unique
+	seen := make(map[string]bool)
+	for _, alias := range aliases {
+		if seen[alias] {
+			t.Errorf("Duplicate alias: %s", alias)
+		}
+		seen[alias] = true
+	}
+}
+
+func TestGenerateDefaultAliases_ConflictResolution(t *testing.T) {
+	// Profiles starting with same letter should get different aliases
+	profiles := []string{"work", "weekend", "winter"}
+	aliases := GenerateDefaultAliases(profiles)
+
+	// All should have unique aliases
+	seen := make(map[string]bool)
+	for _, alias := range aliases {
+		if seen[alias] {
+			t.Errorf("Duplicate alias: %s", alias)
+		}
+		seen[alias] = true
+	}
+}
+
+func TestInstallAndUninstallAliases(t *testing.T) {
+	// Create temp home directory
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	am, err := NewWithShell(Bash)
+	if err != nil {
+		t.Fatalf("NewWithShell() error = %v", err)
+	}
+
+	// Install aliases
+	profiles := map[string]string{
+		"work":     "cw",
+		"personal": "cp",
+	}
+
+	err = am.InstallAliases(profiles)
+	if err != nil {
+		t.Fatalf("InstallAliases() error = %v", err)
+	}
+
+	// Verify installed
+	if !am.IsInstalled() {
+		t.Error("IsInstalled() should return true after install")
+	}
+
+	// List aliases
+	installed, err := am.ListAliases()
+	if err != nil {
+		t.Fatalf("ListAliases() error = %v", err)
+	}
+
+	if len(installed) != 2 {
+		t.Errorf("ListAliases() returned %d aliases, want 2", len(installed))
+	}
+
+	// Uninstall
+	err = am.UninstallAliases()
+	if err != nil {
+		t.Fatalf("UninstallAliases() error = %v", err)
+	}
+
+	// Verify uninstalled
+	if am.IsInstalled() {
+		t.Error("IsInstalled() should return false after uninstall")
+	}
+}
+
+func TestInstallAliases_PreservesExistingContent(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	am, _ := NewWithShell(Bash)
+
+	// Create existing content
+	existingContent := "# My bashrc\nexport PATH=$PATH:/custom/path\n"
+	os.WriteFile(am.rcFile, []byte(existingContent), 0644)
+
+	// Install aliases
+	profiles := map[string]string{"work": "cw"}
+	am.InstallAliases(profiles)
+
+	// Read back
+	content, _ := os.ReadFile(am.rcFile)
+
+	if !strings.Contains(string(content), "export PATH=$PATH:/custom/path") {
+		t.Error("InstallAliases() should preserve existing content")
+	}
+
+	if !strings.Contains(string(content), "alias cw='cdp work'") {
+		t.Error("InstallAliases() should add new aliases")
+	}
+}
+
+func TestInstallAliases_UpdatesExisting(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	am, _ := NewWithShell(Bash)
+
+	// Install first set
+	am.InstallAliases(map[string]string{"work": "cw"})
+
+	// Install second set (should replace)
+	am.InstallAliases(map[string]string{"personal": "cp", "freelance": "cf"})
+
+	// List should only show second set
+	installed, _ := am.ListAliases()
+
+	if _, ok := installed["cw"]; ok {
+		t.Error("Old aliases should be removed")
+	}
+
+	if len(installed) != 2 {
+		t.Errorf("Should have 2 aliases, got %d", len(installed))
+	}
+}
+
+func TestRemoveAliasBlock(t *testing.T) {
+	am := &AliasManager{}
+
+	content := `# My bashrc
+export FOO=bar
+
+# cdp-aliases-start
+# Auto-generated by cdp - DO NOT EDIT THIS BLOCK
+alias cw='cdp work'
+# cdp-aliases-end
+
+# More content
+export BAZ=qux
+`
+
+	result := am.removeAliasBlock(content)
+
+	if strings.Contains(result, "cdp-aliases-start") {
+		t.Error("Should remove alias block start marker")
+	}
+
+	if strings.Contains(result, "alias cw") {
+		t.Error("Should remove aliases")
+	}
+
+	if !strings.Contains(result, "export FOO=bar") {
+		t.Error("Should preserve content before block")
+	}
+
+	if !strings.Contains(result, "export BAZ=qux") {
+		t.Error("Should preserve content after block")
+	}
+}
+
+func TestParseAliases(t *testing.T) {
+	am := &AliasManager{}
+
+	content := `# My bashrc
+# cdp-aliases-start
+# Auto-generated by cdp - DO NOT EDIT THIS BLOCK
+alias cw='cdp work'
+alias cp='cdp personal'
+# cdp-aliases-end
+`
+
+	aliases := am.parseAliases(content)
+
+	if len(aliases) != 2 {
+		t.Errorf("parseAliases() returned %d aliases, want 2", len(aliases))
+	}
+
+	if aliases["cw"] != "work" {
+		t.Errorf("aliases['cw'] = %s, want 'work'", aliases["cw"])
+	}
+
+	if aliases["cp"] != "personal" {
+		t.Errorf("aliases['cp'] = %s, want 'personal'", aliases["cp"])
+	}
+}

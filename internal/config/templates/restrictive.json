@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(rm:-rf *)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "WebFetch",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/.credentials/**)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(npm publish:*)",
+      "Edit"
+    ]
+  }
+}

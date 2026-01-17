@@ -35,6 +35,11 @@ func HandleInit() error {
 
 // HandleCreate creates a new profile
 func HandleCreate(name, description string) error {
+	return HandleCreateWithTemplate(name, description, "")
+}
+
+// HandleCreateWithTemplate creates a new profile with an optional template
+func HandleCreateWithTemplate(name, description, template string) error {
 	cfg, err := loadConfig()
 	if err != nil {
 		return err
@@ -42,13 +47,16 @@ func HandleCreate(name, description string) error {
 
 	pm := config.NewProfileManager(cfg)
 
-	if err := pm.CreateProfile(name, description); err != nil {
+	if err := pm.CreateProfileWithTemplate(name, description, template); err != nil {
 		return fmt.Errorf("failed to create profile: %w", err)
 	}
 
 	ui.Success(fmt.Sprintf("Profile '%s' created successfully!", name))
 	if description != "" {
 		fmt.Printf("Description: %s\n", description)
+	}
+	if template != "" {
+		fmt.Printf("Template: %s\n", template)
 	}
 	fmt.Printf("Location: %s\n", cfg.GetProfilesDir()+"/"+name)
 	fmt.Println("\nSwitch to this profile:")

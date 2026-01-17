@@ -64,6 +64,11 @@ func ValidateName(name string) error {
 
 // CreateProfile creates a new profile
 func (pm *ProfileManager) CreateProfile(name, description string) error {
+	return pm.CreateProfileWithTemplate(name, description, "")
+}
+
+// CreateProfileWithTemplate creates a new profile with an optional template
+func (pm *ProfileManager) CreateProfileWithTemplate(name, description, template string) error {
 	if err := ValidateName(name); err != nil {
 		return fmt.Errorf("invalid profile name: %w", err)
 	}
@@ -75,6 +80,14 @@ func (pm *ProfileManager) CreateProfile(name, description string) error {
 		return fmt.Errorf("profile '%s' already exists", name)
 	}
 
+	// Validate template if specified
+	if template != "" {
+		tm := NewTemplateManager()
+		if !tm.TemplateExists(template) {
+			return fmt.Errorf("template '%s' not found", template)
+		}
+	}
+
 	// Create profile directory
 	if err := os.MkdirAll(profilePath, 0755); err != nil {
 		return fmt.Errorf("failed to create profile directory: %w", err)
@@ -84,7 +97,8 @@ func (pm *ProfileManager) CreateProfile(name, description string) error {
 	metadata := ProfileMetadata{
 		CreatedAt:   time.Now(),
 		Description: description,
-		UsageCount:  0, // Initialize usage count
+		UsageCount:  0,
+		Template:    template,
 	}
 
 	if err := pm.saveMetadata(profilePath, metadata); err != nil {
@@ -104,6 +118,15 @@ func (pm *ProfileManager) CreateProfile(name, description string) error {
 	if err := os.WriteFile(settingsPath, []byte("{}"), 0644); err != nil {
 		os.RemoveAll(profilePath)
 		return fmt.Errorf("failed to create settings file: %w", err)
+	}
+
+	// Apply template if specified
+	if template != "" {
+		tm := NewTemplateManager()
+		if err := tm.ApplyTemplate(profilePath, template); err != nil {
+			os.RemoveAll(profilePath)
+			return fmt.Errorf("failed to apply template: %w", err)
+		}
 	}
 
 	return nil
@@ -280,4 +303,101 @@ func (pm *ProfileManager) ProfileExists(name string) bool {
 	profilePath := filepath.Join(pm.config.ProfilesDir, name)
 	_, err := os.Stat(profilePath)
 	return err == nil
+}
+
+// CloneProfile clones an existing profile to a new name
+func (pm *ProfileManager) CloneProfile(source, dest string) error {
+	if err := ValidateName(dest); err != nil {
+		return fmt.Errorf("invalid destination name: %w", err)
+	}
+
+	// Check source exists
+	sourceProfile, err := pm.GetProfile(source)
+	if err != nil {
+		return fmt.Errorf("source profile '%s' does not exist", source)
+	}
+
+	destPath := filepath.Join(pm.config.ProfilesDir, dest)
+
+	// Check dest doesn't exist
+	if _, err := os.Stat(destPath); err == nil {
+		return fmt.Errorf("profile '%s' already exists", dest)
+	}
+
+	// Create dest directory
+	if err := os.MkdirAll(destPath, 0755); err != nil {
+		return fmt.Errorf("failed to create destination directory: %w", err)
+	}
+
+	// Copy all files from source to dest
+	entries, err := os.ReadDir(sourceProfile.Path)
+	if err != nil {
+		os.RemoveAll(destPath)
+		return fmt.Errorf("failed to read source directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue // Skip subdirectories
+		}
+
+		srcFile := filepath.Join(sourceProfile.Path, entry.Name())
+		dstFile := filepath.Join(destPath, entry.Name())
+
+		data, err := os.ReadFile(srcFile)
+		if err != nil {
+			os.RemoveAll(destPath)
+			return fmt.Errorf("failed to read file %s: %w", entry.Name(), err)
+		}
+
+		if err := os.WriteFile(dstFile, data, 0644); err != nil {
+			os.RemoveAll(destPath)
+			return fmt.Errorf("failed to write file %s: %w", entry.Name(), err)
+		}
+	}
+
+	// Update metadata for the cloned profile
+	newMetadata := sourceProfile.Metadata
+	newMetadata.CreatedAt = time.Now()
+	newMetadata.LastUsed = time.Time{} // Reset last used
+	newMetadata.UsageCount = 0         // Reset usage count
+	newMetadata.Description = fmt.Sprintf("Cloned from %s", source)
+
+	if err := pm.saveMetadata(destPath, newMetadata); err != nil {
+		os.RemoveAll(destPath)
+		return fmt.Errorf("failed to save metadata: %w", err)
+	}
+
+	return nil
+}
+
+// RenameProfile renames an existing profile
+func (pm *ProfileManager) RenameProfile(oldName, newName string) error {
+	if err := ValidateName(newName); err != nil {
+		return fmt.Errorf("invalid new name: %w", err)
+	}
+
+	// Check old exists
+	if !pm.ProfileExists(oldName) {
+		return fmt.Errorf("profile '%s' does not exist", oldName)
+	}
+
+	// Check new doesn't exist
+	if pm.ProfileExists(newName) {
+		return fmt.Errorf("profile '%s' already exists", newName)
+	}
+
+	// Can't rename current profile while it's active
+	if pm.config.CurrentProfile == oldName {
+		return fmt.Errorf("cannot rename the current profile '%s', switch to another profile first", oldName)
+	}
+
+	oldPath := filepath.Join(pm.config.ProfilesDir, oldName)
+	newPath := filepath.Join(pm.config.ProfilesDir, newName)
+
+	if err := os.Rename(oldPath, newPath); err != nil {
+		return fmt.Errorf("failed to rename profile: %w", err)
+	}
+
+	return nil
 }
