@@ -22,15 +22,20 @@ CDP solves the problem of managing different Claude Code configurations for work
 ### Using `go install`
 
 ```bash
-go install github.com/tiagokriok/cdp@latest
+go install github.com/tiagokriok/cdp/cmd/cdp@latest
 ```
 
 For a specific version:
 ```bash
-go install github.com/tiagokriok/cdp@v1.0.0
+go install github.com/tiagokriok/cdp/cmd/cdp@v1.0.0
 ```
 
 This installs `cdp` to `$GOPATH/bin/` (typically `~/go/bin/`). Make sure your `$GOPATH/bin` is in your PATH.
+
+To verify the installation:
+```bash
+cdp version
+```
 
 ### From Source
 
