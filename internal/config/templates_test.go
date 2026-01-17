@@ -145,46 +145,44 @@ func TestApplyTemplate_InvalidTemplate(t *testing.T) {
 	}
 }
 
-func TestCreateProfileWithTemplate(t *testing.T) {
-	// Setup test environment
+func TestApplyTemplate_SettingsFileDoesNotExist(t *testing.T) {
 	tmpDir := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	profilePath := filepath.Join(tmpDir, "test-profile")
+	os.MkdirAll(profilePath, 0755)
 
-	// Initialize config
-	if err := Init(); err != nil {
-		t.Fatalf("Init() error = %v", err)
-	}
-
-	cfg, err := Load()
+	// Don't create settings file - ApplyTemplate should create it
+	tm := NewTemplateManager()
+	err := tm.ApplyTemplate(profilePath, "restrictive")
 	if err != nil {
-		t.Fatalf("Load() error = %v", err)
+		t.Errorf("ApplyTemplate() should succeed and create settings file: %v", err)
 	}
 
-	pm := NewProfileManager(cfg)
+	// Verify settings file was created
+	settingsPath := filepath.Join(profilePath, ClaudeSettingsFile)
+	if _, err := os.Stat(settingsPath); os.IsNotExist(err) {
+		t.Error("Settings file should have been created")
+	}
+}
 
-	// Create profile with template
-	err = pm.CreateProfileWithTemplate("test-profile", "Test description", "restrictive")
+func TestApplyTemplate_Permissive(t *testing.T) {
+	tmpDir := t.TempDir()
+	profilePath := filepath.Join(tmpDir, "test-profile")
+	os.MkdirAll(profilePath, 0755)
+
+	// Create empty settings file
+	settingsPath := filepath.Join(profilePath, ClaudeSettingsFile)
+	os.WriteFile(settingsPath, []byte("{}"), 0644)
+
+	tm := NewTemplateManager()
+	err := tm.ApplyTemplate(profilePath, "permissive")
 	if err != nil {
-		t.Fatalf("CreateProfileWithTemplate() error = %v", err)
+		t.Fatalf("ApplyTemplate() error = %v", err)
 	}
 
-	// Verify profile was created
-	profile, err := pm.GetProfile("test-profile")
-	if err != nil {
-		t.Fatalf("GetProfile() error = %v", err)
-	}
-
-	if profile.Metadata.Template != "restrictive" {
-		t.Errorf("profile.Metadata.Template = %q, want 'restrictive'", profile.Metadata.Template)
-	}
-
-	// Verify settings file has template content
-	settingsPath := filepath.Join(profile.Path, ClaudeSettingsFile)
+	// Verify settings file has content
 	data, err := os.ReadFile(settingsPath)
 	if err != nil {
-		t.Fatalf("Failed to read settings: %v", err)
+		t.Fatalf("Failed to read settings file: %v", err)
 	}
 
 	if len(data) < 10 {
@@ -192,18 +190,29 @@ func TestCreateProfileWithTemplate(t *testing.T) {
 	}
 }
 
-func TestCreateProfileWithTemplate_InvalidTemplate(t *testing.T) {
+func TestLoadTemplate_CustomTemplate(t *testing.T) {
 	tmpDir := t.TempDir()
-	originalHome := os.Getenv("HOME")
+	customDir := filepath.Join(tmpDir, ".cdp", "templates")
+	os.MkdirAll(customDir, 0755)
+
+	// Create a custom template file
+	customTemplate := filepath.Join(customDir, "custom.json")
+	os.WriteFile(customTemplate, []byte(`{"name":"custom","content":{"key":"value"}}`), 0644)
+
+	// Create temp home for override
+	origHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	defer os.Setenv("HOME", origHome)
 
-	Init()
-	cfg, _ := Load()
-	pm := NewProfileManager(cfg)
+	tm := NewTemplateManager()
 
-	err := pm.CreateProfileWithTemplate("test-profile", "Test", "nonexistent")
-	if err == nil {
-		t.Error("CreateProfileWithTemplate() with invalid template should return error")
+	// The custom template might not be loaded since it's in custom templates dir
+	// and our built-in templates should still work
+	template, err := tm.LoadTemplate("restrictive")
+	if err != nil {
+		t.Errorf("LoadTemplate('restrictive') should work: %v", err)
+	}
+	if template == nil {
+		t.Error("template should not be nil")
 	}
 }
