@@ -9,6 +9,7 @@ CDP solves the problem of managing different Claude Code configurations for work
 ## Features (v1.0.0)
 
 - **Profile Management**: Create, list, delete, clone, and rename profiles
+- **Import Existing Config**: Migrate your existing Claude Code configuration into CDP
 - **Interactive TUI**: Visual profile selector with arrow key navigation
 - **Templates**: Pre-configured settings templates (restrictive/permissive)
 - **Shell Aliases**: Quick profile switching via shell aliases
@@ -60,6 +61,9 @@ cdp create personal "Personal projects"
 # Create a profile with a template
 cdp create secure-work "Secure work profile" --template restrictive
 
+# Import an existing Claude configuration
+cdp create work-import --import-from ~/.config/claude-code --description "Imported from Claude"
+
 # List profiles
 cdp list
 
@@ -94,16 +98,34 @@ cdp delete personal
 Initialize CDP configuration directory (`~/.cdp/`) and profiles directory (`~/.claude-profiles/`).
 
 ### `cdp create <name> [description]`
-Create a new profile with the given name and optional description.
+Create a new profile with the given name and optional description. You can also import an existing Claude configuration.
 
 **Flags:**
 - `--template, -t <name>`: Apply a settings template (restrictive, permissive)
+- `--import-from <path>`: Import an existing Claude configuration from a directory
+- `--description, -d <text>`: Profile description (overrides positional argument)
 
-Examples:
+**Examples:**
+
+Create from scratch:
 ```bash
 cdp create work "Work profile"
 cdp create secure-work "Secure profile" --template restrictive
 ```
+
+Import existing configuration:
+```bash
+# Import from standard Claude location
+cdp create work --import-from ~/.config/claude-code --description "Work profile"
+
+# Import from custom backup location
+cdp create personal --import-from ~/backups/claude-2024-01
+
+# Using short flag
+cdp create test --import-from /tmp/claude-config -d "Test profile"
+```
+
+**Note:** `--template` and `--import-from` cannot be used together.
 
 ### `cdp list`
 List all available profiles with their metadata.

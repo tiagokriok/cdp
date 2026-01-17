@@ -73,6 +73,34 @@ Each profile is a directory containing:
 
 CDP only reads/writes `.metadata.json`. Other files are created as placeholders (empty `{}`).
 
+### Import Feature
+
+Users can import existing Claude Code configurations into CDP using `cdp create <name> --import-from <path>`. The import process:
+
+1. **Validation**: Validates profile name and source directory
+2. **Path Resolution**: Expands `~` in paths, converts to absolute paths
+3. **Preview**: Shows file scan results (found/missing files, subdirectories to skip)
+4. **Interactive Prompts**:
+   - Overwrite confirmation if destination exists
+   - Import confirmation with preview details
+   - Option to remove original files after import
+5. **File Copy**: Copies all files except `.metadata.json`
+6. **Placeholder Creation**: Creates empty `.claude.json` and `settings.json` if missing
+7. **Metadata Creation**: Creates new CDP `.metadata.json` with provided description
+
+**Key Implementation Details** (`internal/config/profile.go`):
+- `ImportProfile(sourcePath, name, description string) error` - Main import method
+- `promptYesNo(question string, defaultYes bool) bool` - Helper for interactive yes/no prompts
+- Subdirectories in source are skipped (not copied)
+- Existing imported metadata fields (template, customFlags) are preserved
+- All errors trigger cleanup (destination directory removed)
+- Compatible with `--template` flag (mutually exclusive validation in CLI)
+
+**Flag Compatibility**:
+- `--import-from` and `--template` cannot be used together (enforced in `create.go`)
+- Works with `--description` / `-d` flag and positional description argument
+- Description flag takes precedence over positional argument
+
 ### Parser Design
 
 CDP now leverages the [Cobra](https://cobra.dev/) CLI framework for robust argument parsing and command dispatching.

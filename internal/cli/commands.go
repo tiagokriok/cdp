@@ -65,6 +65,30 @@ func HandleCreateWithTemplate(name, description, template string) error {
 	return nil
 }
 
+// HandleImport imports an existing Claude configuration into a new profile
+func HandleImport(sourcePath, name, description string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+
+	pm := config.NewProfileManager(cfg)
+
+	if err := pm.ImportProfile(sourcePath, name, description); err != nil {
+		return fmt.Errorf("failed to import profile: %w", err)
+	}
+
+	ui.Success(fmt.Sprintf("Profile '%s' imported successfully!", name))
+	if description != "" {
+		fmt.Printf("Description: %s\n", description)
+	}
+	fmt.Printf("Location: %s\n", cfg.GetProfilesDir()+"/"+name)
+	fmt.Println("\nSwitch to this profile:")
+	fmt.Printf("  cdp %s\n", name)
+
+	return nil
+}
+
 // HandleList lists all profiles
 func HandleList() error {
 	cfg, err := loadConfig()

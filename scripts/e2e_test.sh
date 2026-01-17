@@ -263,6 +263,76 @@ test_error_handling() {
     fi
 }
 
+# Test import command
+test_import() {
+    test_section "Testing import command"
+
+    # Create a temporary source directory with Claude files
+    IMPORT_SOURCE=$(mktemp -d)
+    echo '{"token":"test123"}' > "$IMPORT_SOURCE/.claude.json"
+    echo '{"theme":"dark"}' > "$IMPORT_SOURCE/settings.json"
+    echo "custom data" > "$IMPORT_SOURCE/custom.txt"
+
+    # Create subdirectory (should be skipped)
+    mkdir -p "$IMPORT_SOURCE/logs"
+    echo "log content" > "$IMPORT_SOURCE/logs/test.log"
+
+    # Test basic import with confirmation
+    if echo -e "y\ny" | ./cdp create imported --import-from "$IMPORT_SOURCE" --description "Imported profile" 2>/dev/null; then
+        if [ -d "$HOME/.claude-profiles/imported" ]; then
+            pass "Import command created profile directory"
+        else
+            fail "Import did not create profile directory"
+        fi
+
+        # Verify files were copied
+        if [ -f "$HOME/.claude-profiles/imported/.claude.json" ]; then
+            pass "Import copied .claude.json"
+        else
+            fail "Import did not copy .claude.json"
+        fi
+
+        if [ -f "$HOME/.claude-profiles/imported/settings.json" ]; then
+            pass "Import copied settings.json"
+        else
+            fail "Import did not copy settings.json"
+        fi
+
+        if [ -f "$HOME/.claude-profiles/imported/custom.txt" ]; then
+            pass "Import copied custom files"
+        else
+            fail "Import did not copy custom files"
+        fi
+
+        # Verify metadata was created
+        if [ -f "$HOME/.claude-profiles/imported/.metadata.json" ]; then
+            pass "Import created metadata file"
+        else
+            fail "Import did not create metadata file"
+        fi
+
+        # Verify subdirectories were skipped
+        if [ ! -d "$HOME/.claude-profiles/imported/logs" ]; then
+            pass "Import skipped subdirectories"
+        else
+            fail "Import should skip subdirectories"
+        fi
+    else
+        fail "Import command failed"
+    fi
+
+    # Test import with missing source file
+    output=$(./cdp create failed-import --import-from /nonexistent/path 2>&1)
+    if echo "$output" | grep -qi "does not exist"; then
+        pass "Import handles non-existent source path"
+    else
+        fail "Import should reject non-existent source"
+    fi
+
+    # Cleanup
+    rm -rf "$IMPORT_SOURCE"
+}
+
 # Main test execution
 main() {
     echo -e "${YELLOW}CDP End-to-End Tests${NC}"
@@ -276,6 +346,7 @@ main() {
     test_switch
     test_current
     test_delete
+    test_import
     test_help_version
     test_error_handling
 

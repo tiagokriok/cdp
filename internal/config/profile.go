@@ -1,12 +1,14 @@
 package config
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -400,4 +402,263 @@ func (pm *ProfileManager) RenameProfile(oldName, newName string) error {
 	}
 
 	return nil
+}
+
+// ImportProfile imports an existing Claude configuration into a new profile
+func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) error {
+	// 1. VALIDATE INPUTS
+	if err := ValidateName(name); err != nil {
+		return fmt.Errorf("invalid profile name: %w", err)
+	}
+
+	// Expand ~ in source path
+	if strings.HasPrefix(sourcePath, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("failed to get home directory: %w", err)
+		}
+		sourcePath = filepath.Join(home, sourcePath[2:])
+	} else if sourcePath == "~" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("failed to get home directory: %w", err)
+		}
+		sourcePath = home
+	}
+
+	// Convert to absolute path
+	absSourcePath, err := filepath.Abs(sourcePath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve source path: %w", err)
+	}
+
+	// Validate source exists and is a directory
+	sourceInfo, err := os.Stat(absSourcePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("source path '%s' does not exist", sourcePath)
+		}
+		return fmt.Errorf("failed to access source path: %w", err)
+	}
+	if !sourceInfo.IsDir() {
+		return fmt.Errorf("source path '%s' is not a directory", sourcePath)
+	}
+
+	// 2. CHECK DESTINATION
+	destPath := filepath.Join(pm.config.ProfilesDir, name)
+	profileExists := false
+	if _, err := os.Stat(destPath); err == nil {
+		profileExists = true
+	}
+
+	// 3. SCAN SOURCE DIRECTORY (for preview)
+	entries, err := os.ReadDir(absSourcePath)
+	if err != nil {
+		return fmt.Errorf("failed to read source directory: %w", err)
+	}
+
+	// Categorize files
+	var (
+		foundClaudeConfig   bool
+		foundSettings       bool
+		foundMetadata       bool
+		otherFiles          []string
+		skippedDirs         []string
+	)
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			skippedDirs = append(skippedDirs, entry.Name())
+			continue
+		}
+
+		switch entry.Name() {
+		case ClaudeConfigFile:
+			foundClaudeConfig = true
+		case ClaudeSettingsFile:
+			foundSettings = true
+		case MetadataFileName:
+			foundMetadata = true
+		default:
+			otherFiles = append(otherFiles, entry.Name())
+		}
+	}
+
+	// 4. INTERACTIVE VALIDATION PREVIEW
+	fmt.Println()
+	fmt.Println("ℹ Import Preview")
+	fmt.Println(strings.Repeat("─", 60))
+	fmt.Printf("Source:      %s\n", absSourcePath)
+	fmt.Printf("Destination: %s\n", destPath)
+	fmt.Printf("Profile:     %s\n", name)
+	if description != "" {
+		fmt.Printf("Description: %s\n", description)
+	}
+	fmt.Println(strings.Repeat("─", 60))
+
+	fmt.Println()
+	fmt.Println("Files to import:")
+	fileCount := 0
+	if foundClaudeConfig {
+		fmt.Printf("  ✓ %s (OAuth credentials)\n", ClaudeConfigFile)
+		fileCount++
+	} else {
+		fmt.Printf("  ✗ %s (will create empty placeholder)\n", ClaudeConfigFile)
+	}
+	if foundSettings {
+		fmt.Printf("  ✓ %s (Claude settings)\n", ClaudeSettingsFile)
+		fileCount++
+	} else {
+		fmt.Printf("  ✗ %s (will create empty placeholder)\n", ClaudeSettingsFile)
+	}
+	if foundMetadata {
+		fmt.Printf("  ~ %s (will overwrite with new CDP metadata)\n", MetadataFileName)
+	}
+	for _, fileName := range otherFiles {
+		fmt.Printf("  ✓ %s\n", fileName)
+		fileCount++
+	}
+
+	if len(skippedDirs) > 0 {
+		fmt.Printf("\nSkipped subdirectories: %s\n", strings.Join(skippedDirs, ", "))
+	}
+
+	fmt.Printf("\nTotal files to copy: %d\n", fileCount)
+
+	// Warn if no Claude config found
+	if !foundClaudeConfig {
+		fmt.Println("\n⚠ Warning: No .claude.json found - this may not be a valid Claude configuration directory")
+	}
+
+	// 5. OVERWRITE CONFIRMATION
+	if profileExists {
+		fmt.Printf("\n⚠ Profile '%s' already exists!\n", name)
+		if !promptYesNo("Overwrite existing profile?", false) {
+			return fmt.Errorf("import cancelled by user")
+		}
+		// Remove existing profile
+		if err := os.RemoveAll(destPath); err != nil {
+			return fmt.Errorf("failed to remove existing profile: %w", err)
+		}
+	}
+
+	// 6. IMPORT CONFIRMATION
+	if !promptYesNo("\nProceed with import?", true) {
+		return fmt.Errorf("import cancelled by user")
+	}
+
+	// 7. CREATE DESTINATION DIRECTORY
+	if err := os.MkdirAll(destPath, 0755); err != nil {
+		return fmt.Errorf("failed to create destination directory: %w", err)
+	}
+
+	// 8. COPY FILES
+	fmt.Println("\nImporting files...")
+	copiedCount := 0
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		srcFile := filepath.Join(absSourcePath, entry.Name())
+		dstFile := filepath.Join(destPath, entry.Name())
+
+		// Skip metadata file - we'll create our own
+		if entry.Name() == MetadataFileName {
+			continue
+		}
+
+		data, err := os.ReadFile(srcFile)
+		if err != nil {
+			os.RemoveAll(destPath)
+			return fmt.Errorf("failed to read file %s: %w", entry.Name(), err)
+		}
+
+		if err := os.WriteFile(dstFile, data, 0644); err != nil {
+			os.RemoveAll(destPath)
+			return fmt.Errorf("failed to write file %s: %w", entry.Name(), err)
+		}
+
+		fmt.Printf("  ✓ Copied %s\n", entry.Name())
+		copiedCount++
+	}
+
+	// 9. CREATE MISSING REQUIRED FILES
+	if !foundClaudeConfig {
+		claudeConfigPath := filepath.Join(destPath, ClaudeConfigFile)
+		if err := os.WriteFile(claudeConfigPath, []byte("{}"), 0644); err != nil {
+			os.RemoveAll(destPath)
+			return fmt.Errorf("failed to create Claude config file: %w", err)
+		}
+		fmt.Printf("  + Created empty %s\n", ClaudeConfigFile)
+	}
+
+	if !foundSettings {
+		settingsPath := filepath.Join(destPath, ClaudeSettingsFile)
+		if err := os.WriteFile(settingsPath, []byte("{}"), 0644); err != nil {
+			os.RemoveAll(destPath)
+			return fmt.Errorf("failed to create settings file: %w", err)
+		}
+		fmt.Printf("  + Created empty %s\n", ClaudeSettingsFile)
+	}
+
+	// 10. CREATE/UPDATE METADATA
+	metadata := ProfileMetadata{
+		CreatedAt:   time.Now(),
+		Description: description,
+		UsageCount:  0,
+		Template:    "", // No template for imported profiles
+	}
+
+	// Preserve template/customFlags if metadata was imported
+	if foundMetadata {
+		importedMetadata, err := pm.loadMetadata(destPath)
+		if err == nil {
+			metadata.Template = importedMetadata.Template
+			metadata.CustomFlags = importedMetadata.CustomFlags
+		}
+	}
+
+	if err := pm.saveMetadata(destPath, metadata); err != nil {
+		os.RemoveAll(destPath)
+		return fmt.Errorf("failed to save metadata: %w", err)
+	}
+	fmt.Printf("  ✓ Created %s\n", MetadataFileName)
+
+	// 11. ASK ABOUT REMOVING ORIGINAL
+	fmt.Printf("\nℹ Original files are still in: %s\n", absSourcePath)
+	if promptYesNo("Remove original files?", false) {
+		if err := os.RemoveAll(absSourcePath); err != nil {
+			fmt.Printf("⚠ Failed to remove original files: %v\n", err)
+			fmt.Println("You can manually delete them later")
+		} else {
+			fmt.Printf("  ✓ Removed original files from %s\n", absSourcePath)
+		}
+	}
+
+	return nil
+}
+
+// promptYesNo prompts the user for a yes/no response
+func promptYesNo(question string, defaultYes bool) bool {
+	defaultChoice := "y/N"
+	if defaultYes {
+		defaultChoice = "Y/n"
+	}
+
+	fmt.Printf("%s [%s]: ", question, defaultChoice)
+
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return false
+	}
+
+	input = strings.TrimSpace(strings.ToLower(input))
+
+	if input == "" {
+		return defaultYes
+	}
+
+	return input == "y" || input == "yes"
 }
