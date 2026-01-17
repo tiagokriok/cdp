@@ -8,6 +8,19 @@ import (
 	"github.com/tiagokriok/cdp/internal/config"
 )
 
+// mockStdin temporarily replaces os.Stdin with a buffer containing the provided input.
+// It returns a function that restores the original os.Stdin.
+func mockStdin(input string) func() {
+	oldStdin := os.Stdin
+	r, w, _ := os.Pipe()
+	_, _ = w.WriteString(input)
+	_ = w.Close()
+	os.Stdin = r
+	return func() {
+		os.Stdin = oldStdin
+	}
+}
+
 // setupTestEnv creates a temporary directory structure for testing
 func setupTestEnv(t *testing.T) (string, func()) {
 	t.Helper()
@@ -205,5 +218,189 @@ func TestGetProfilesDirOrEmpty(t *testing.T) {
 	// Should return a non-empty string (home dir exists)
 	if result == "" {
 		t.Error("getProfilesDirOrEmpty() should return non-empty path")
+	}
+}
+
+func TestHandleDelete(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+	defer mockStdin("y\n")() // Mock input for confirmation
+
+	// Initialize
+	err := config.Init()
+	if err != nil {
+		t.Fatalf("config.Init() failed: %v", err)
+	}
+
+	// Create a profile
+	cfg, _ := config.Load()
+	pm := config.NewProfileManager(cfg)
+	pm.CreateProfile("to-delete", "Will be deleted")
+
+	// Delete the profile
+	err = HandleDelete("to-delete")
+	if err != nil {
+		t.Fatalf("HandleDelete() failed: %v", err)
+	}
+
+	// Verify it's gone
+	if pm.ProfileExists("to-delete") {
+		t.Error("Profile still exists after deletion")
+	}
+
+	// Try to delete non-existent profile
+	err = HandleDelete("nonexistent")
+	if err == nil {
+		t.Error("HandleDelete() should fail for non-existent profile")
+	}
+}
+
+func TestHandleDeleteCurrentProfile(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+	defer mockStdin("y\n")() // Mock input for confirmation
+
+	// Initialize
+	err := config.Init()
+	if err != nil {
+		t.Fatalf("config.Init() failed: %v", err)
+	}
+
+	// Create a profile and set as current
+	cfg, _ := config.Load()
+	pm := config.NewProfileManager(cfg)
+	pm.CreateProfile("current", "Current profile")
+	cfg.SetCurrentProfile("current")
+
+	// Try to delete current profile - should fail
+	err = HandleDelete("current")
+	if err == nil {
+		t.Error("HandleDelete() should fail for current profile")
+	}
+}
+
+func TestHandleInfo_CurrentProfile(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Initialize
+	err := config.Init()
+	if err != nil {
+		t.Fatalf("config.Init() failed: %v", err)
+	}
+
+	// Create a profile and set as current
+	cfg, _ := config.Load()
+	pm := config.NewProfileManager(cfg)
+	pm.CreateProfile("current", "Current profile")
+	cfg.SetCurrentProfile("current")
+
+	// Get info for current profile by calling HandleCurrent()
+	err = HandleCurrent()
+	if err != nil {
+		t.Fatalf("HandleCurrent() failed for current profile: %v", err)
+	}
+}
+
+func TestHandleInfo_NoCurrentProfile(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Initialize
+	err := config.Init()
+	if err != nil {
+		t.Fatalf("config.Init() failed: %v", err)
+	}
+
+	// Try to get info when no current profile is set. HandleCurrent should return nil
+	// but print an informative message.
+	err = HandleCurrent()
+	if err != nil {
+		t.Fatalf("HandleCurrent() failed when no current profile is set: %v", err)
+	}
+}
+
+func TestHandleSwitch_ClaudeFlags(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Initialize
+	err := config.Init()
+	if err != nil {
+		t.Fatalf("config.Init() failed: %v", err)
+	}
+
+	// Create a profile
+	cfg, _ := config.Load()
+	pm := config.NewProfileManager(cfg)
+	pm.CreateProfile("with-flags", "Profile for testing flags")
+
+	// Switch to profile with flags (noRun=true to avoid actually running claude)
+	flags := []string{"--continue", "--verbose"}
+	err = HandleSwitch("with-flags", flags, true)
+	if err != nil {
+		t.Fatalf("HandleSwitch() failed with flags: %v", err)
+	}
+
+	// Verify profile is now current
+	cfg, _ = config.Load()
+	if cfg.GetCurrentProfile() != "with-flags" {
+		t.Errorf("Current profile = %q, want 'with-flags'", cfg.GetCurrentProfile())
+	}
+}
+
+func TestHandleCurrent_WithProfile(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Initialize
+	err := config.Init()
+	if err != nil {
+		t.Fatalf("config.Init() failed: %v", err)
+	}
+
+	// Create and set current profile
+	cfg, _ := config.Load()
+	pm := config.NewProfileManager(cfg)
+	pm.CreateProfile("active", "Active profile")
+	cfg.SetCurrentProfile("active")
+
+	// Show current profile
+	err = HandleCurrent()
+	if err != nil {
+		t.Fatalf("HandleCurrent() failed: %v", err)
+	}
+}
+
+func TestHandleList_NotInitialized(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Try to list without init
+	err := HandleList()
+	if err == nil {
+		t.Error("HandleList() should fail when not initialized")
+	}
+}
+
+func TestHandleCreate_NotInitialized(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Try to create without init
+	err := HandleCreate("test", "Description")
+	if err == nil {
+		t.Error("HandleCreate() should fail when not initialized")
+	}
+}
+
+func TestHandleSwitch_NotInitialized(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Try to switch without init
+	err := HandleSwitch("test", nil, true)
+	if err == nil {
+		t.Error("HandleSwitch() should fail when not initialized")
 	}
 }

@@ -308,3 +308,224 @@ func TestProfileExists(t *testing.T) {
 		t.Error("ProfileExists() returned false for existing profile")
 	}
 }
+
+func TestCloneProfile(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create source profile
+	if err := pm.CreateProfile("source", "Source profile"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+
+	// Add some custom content to the source
+	sourcePath := filepath.Join(pm.config.ProfilesDir, "source")
+	settingsPath := filepath.Join(sourcePath, ClaudeSettingsFile)
+	if err := os.WriteFile(settingsPath, []byte(`{"custom": "setting"}`), 0644); err != nil {
+		t.Fatalf("Failed to write settings: %v", err)
+	}
+
+	// Clone the profile
+	if err := pm.CloneProfile("source", "dest"); err != nil {
+		t.Fatalf("CloneProfile() failed: %v", err)
+	}
+
+	// Verify destination exists
+	destPath := filepath.Join(pm.config.ProfilesDir, "dest")
+	if _, err := os.Stat(destPath); os.IsNotExist(err) {
+		t.Error("Destination profile directory was not created")
+	}
+
+	// Verify settings were copied
+	destSettingsPath := filepath.Join(destPath, ClaudeSettingsFile)
+	data, err := os.ReadFile(destSettingsPath)
+	if err != nil {
+		t.Fatalf("Failed to read dest settings: %v", err)
+	}
+	if string(data) != `{"custom": "setting"}` {
+		t.Errorf("Settings content = %s, want %s", string(data), `{"custom": "setting"}`)
+	}
+
+	// Verify metadata was reset
+	destProfile, err := pm.GetProfile("dest")
+	if err != nil {
+		t.Fatalf("GetProfile() failed: %v", err)
+	}
+	if destProfile.Metadata.UsageCount != 0 {
+		t.Errorf("UsageCount = %d, want 0", destProfile.Metadata.UsageCount)
+	}
+}
+
+func TestCloneProfileNonExistent(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	err := pm.CloneProfile("non-existent", "dest")
+	if err == nil {
+		t.Error("Expected error when cloning non-existent profile")
+	}
+}
+
+func TestCloneProfileDestExists(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create source and destination profiles
+	if err := pm.CreateProfile("source", "Source"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+	if err := pm.CreateProfile("dest", "Dest"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+
+	// Try to clone - should fail
+	err := pm.CloneProfile("source", "dest")
+	if err == nil {
+		t.Error("Expected error when cloning to existing profile")
+	}
+}
+
+func TestRenameProfile(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create a profile
+	if err := pm.CreateProfile("old-name", "Original profile"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+
+	// Rename it
+	if err := pm.RenameProfile("old-name", "new-name"); err != nil {
+		t.Fatalf("RenameProfile() failed: %v", err)
+	}
+
+	// Verify old name no longer exists
+	if pm.ProfileExists("old-name") {
+		t.Error("Old profile name still exists")
+	}
+
+	// Verify new name exists
+	if !pm.ProfileExists("new-name") {
+		t.Error("New profile name does not exist")
+	}
+
+	// Verify profile data is preserved
+	profile, err := pm.GetProfile("new-name")
+	if err != nil {
+		t.Fatalf("GetProfile() failed: %v", err)
+	}
+	if profile.Metadata.Description != "Original profile" {
+		t.Errorf("Description = %s, want 'Original profile'", profile.Metadata.Description)
+	}
+}
+
+func TestRenameProfileNonExistent(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	err := pm.RenameProfile("non-existent", "new-name")
+	if err == nil {
+		t.Error("Expected error when renaming non-existent profile")
+	}
+}
+
+func TestRenameProfileDestExists(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create two profiles
+	if err := pm.CreateProfile("profile1", "First"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+	if err := pm.CreateProfile("profile2", "Second"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+
+	// Try to rename - should fail
+	err := pm.RenameProfile("profile1", "profile2")
+	if err == nil {
+		t.Error("Expected error when renaming to existing profile name")
+	}
+}
+
+func TestRenameCurrentProfile(t *testing.T) {
+	cfg, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create a profile and set as current
+	if err := pm.CreateProfile("current", "Current profile"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+	if err := cfg.SetCurrentProfile("current"); err != nil {
+		t.Fatalf("SetCurrentProfile() failed: %v", err)
+	}
+
+	// Try to rename - should fail
+	err := pm.RenameProfile("current", "new-name")
+	if err == nil {
+		t.Error("Expected error when renaming current profile")
+	}
+}
+
+func TestCreateProfileWithTemplate(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create profile with restrictive template
+	err := pm.CreateProfileWithTemplate("secure", "Secure profile", "restrictive")
+	if err != nil {
+		t.Fatalf("CreateProfileWithTemplate() failed: %v", err)
+	}
+
+	// Verify profile was created
+	if !pm.ProfileExists("secure") {
+		t.Error("Profile was not created")
+	}
+
+	// Verify settings file has template content
+	settingsPath := filepath.Join(pm.config.ProfilesDir, "secure", ClaudeSettingsFile)
+	data, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("Failed to read settings: %v", err)
+	}
+
+	// Should contain "autoUpdaterStatus": "disabled"
+	if len(data) < 10 {
+		t.Error("Settings file appears empty or too small")
+	}
+
+	// Verify metadata has template recorded
+	profile, err := pm.GetProfile("secure")
+	if err != nil {
+		t.Fatalf("GetProfile() failed: %v", err)
+	}
+	if profile.Metadata.Template != "restrictive" {
+		t.Errorf("Template = %s, want 'restrictive'", profile.Metadata.Template)
+	}
+}
+
+func TestCreateProfileWithInvalidTemplate(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	err := pm.CreateProfileWithTemplate("test", "Test", "non-existent-template")
+	if err == nil {
+		t.Error("Expected error when using non-existent template")
+	}
+}
+
+func TestCreateProfileWithEmptyTemplate(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Empty template should work (no template applied)
+	err := pm.CreateProfileWithTemplate("test", "Test", "")
+	if err != nil {
+		t.Fatalf("CreateProfileWithTemplate() with empty template failed: %v", err)
+	}
+
+	// Verify profile was created
+	if !pm.ProfileExists("test") {
+		t.Error("Profile was not created")
+	}
+}
