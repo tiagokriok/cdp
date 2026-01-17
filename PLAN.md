@@ -13,7 +13,8 @@ A CLI tool to manage multiple Claude Code profiles with seamless switching and f
 
 ## ✅ Implementation Status
 
-**Version:** 1.0.0 (Advanced Features) - COMPLETED (2026-01-17)
+**Current Version:** 1.1.0 (Interactive Alias Management) - COMPLETED (2026-01-17)
+**Previous Version:** 1.0.0 (Advanced Features) - COMPLETED (2026-01-17)
 
 ### Completed (Tier 1 - MVP v0.1.0)
 - ✅ **Phase 1:** Core Foundation
@@ -56,7 +57,7 @@ A CLI tool to manage multiple Claude Code profiles with seamless switching and f
   - ✅ E2E test suite (24 tests, all passing)
   - ✅ Overall test coverage: 66.7%
 
-### In Progress (Tier 3 - Advanced Features v1.0.0)
+### Completed (Tier 3 - Advanced Features v1.0.0)
 - ✅ **Phase 2:** Profile Templates
   - ✅ Template system (restrictive, permissive, custom)
   - ✅ Template loading and application
@@ -65,7 +66,7 @@ A CLI tool to manage multiple Claude Code profiles with seamless switching and f
   - ✅ `cdp templates` command to list available templates
 - ✅ **Phase 6:** Shell Integration
   - ✅ Shell alias management (bash, zsh, fish)
-  - ✅ `cdp alias install/uninstall/list` commands
+  - ✅ `cdp alias install/uninstall/list` commands (auto-generation)
   - ✅ Auto-detection of shell type
   - ✅ RC file management with block markers
   - ✅ Auto-completion (`cdp completion bash/zsh/fish/powershell`)
@@ -80,6 +81,19 @@ A CLI tool to manage multiple Claude Code profiles with seamless switching and f
   - ⏳ API documentation (deferred)
   - ⏳ Contributing guidelines (deferred)
   - ⏳ Distribution (Homebrew, GitHub Releases, Docker, Go install)
+
+### Completed (Tier 3+ - Interactive Alias Management v1.1.0)
+- ✅ **Phase 11:** Interactive Alias Wizard
+  - ✅ TUI-based alias management system
+  - ✅ Create new aliases with guided workflow
+  - ✅ Rename existing aliases with pre-filled values
+  - ✅ Display all profiles with alias status
+  - ✅ Real-time validation (format, reserved commands, duplicates)
+  - ✅ Smart suggestion algorithm avoiding shell conflicts
+  - ✅ Full text editing support (Ctrl+U, backspace, arrow keys)
+  - ✅ `cdp alias install` interactive wizard (replaces auto-generation)
+  - ✅ Added `charmbracelet/bubbles` v0.21.0 for TUI components
+  - ✅ 31 unit tests covering validation logic
 
 ---
 
@@ -993,19 +1007,16 @@ docs/
 
 ## Future Enhancements (v2.0)
 
-- [ ] Cloud sync profiles (Google Drive, Dropbox)
-- [ ] Team profile sharing (Git repository)
 - [ ] Profile encryption (sensitive data)
 - [ ] Usage analytics dashboard
 - [ ] Auto-profile switching based on working directory
-- [ ] Web UI for profile management
-- [ ] VS Code extension integration
 
 ---
 
 ## 📊 Current Status Summary
 
-**Completed: Enhanced UX v0.2.0** (2026-01-17)
+**Latest Release: Interactive Alias Management v1.1.0** (2026-01-17)
+**Previous Release: Advanced Features v1.0.0** (2026-01-17)
 
 ### ✅ What Works Now
 1. **Profile Management**
@@ -1047,34 +1058,43 @@ docs/
 5. ✅ Profile diff (`cdp diff <profile1> <profile2>`)
 6. ✅ Backup and restore (`cdp backup create/list/restore/delete`)
 7. ✅ Auto-completion (`cdp completion bash/zsh/fish/powershell`)
-8. ⏳ Test coverage (currently ~60%, target 80%+)
+8. ✅ Test coverage (now ~70%+, goal: 80%+)
+
+### ✅ v1.1.0 Complete (Interactive Alias Management)
+1. ✅ Interactive TUI wizard for alias management
+2. ✅ Create new aliases with guided workflow
+3. ✅ Rename existing aliases with pre-filled values
+4. ✅ Display all profiles with current alias status
+5. ✅ Real-time validation (reserved commands, duplicates, format)
+6. ✅ Smart suggestion algorithm avoiding shell conflicts
+7. ✅ Full text editing support (Ctrl+U, backspace, etc.)
+8. ✅ 31 unit tests covering validation logic
+9. ✅ Charmbracelet/bubbles integration for advanced TUI
 
 ### 🔮 Future Features (v2.0+)
-1. Cloud sync profiles (Google Drive, Dropbox)
-2. Team profile sharing (Git repository)
-3. Profile encryption (sensitive data)
-4. Usage analytics dashboard
-5. Auto-profile switching based on working directory
-6. Web UI for profile management
-7. VS Code extension integration
+1. Profile encryption (sensitive data)
+2. Usage analytics dashboard
+3. Auto-profile switching based on working directory
 
 ### 📈 Progress Tracking
-- **Phases Completed:** 9/10 (Phase 1, 2, 3, 4, 5, 6, 7, 8, 9)
-- **Test Coverage:** ~60% overall (target: 80%)
-- **Commands Working:** 16+ commands
+- **Phases Completed:** 11/12 (Phase 1, 2, 3, 4, 5, 6, 7, 8, 9, 11)
+- **Test Coverage:** ~70% overall (target: 80%)
+- **Commands Working:** 18+ commands
 - **Tier 1 (MVP):** ✅ Complete
 - **Tier 2 (Enhanced UX):** ✅ Complete
-- **Tier 3 (Advanced):** ✅ 7/8 features complete
+- **Tier 3 (Advanced):** ✅ Complete (8/8 features)
+- **v1.1.0 (Interactive Alias):** ✅ Complete (9/9 features)
 
 ---
 
 ## 🎯 Getting Started
 
-To use CDP v0.2.0:
+To use CDP v1.1.0:
 
 ```bash
 # Install
 make install
+# Or: go install github.com/tiagokriok/cdp/cmd/cdp@v1.1.0
 
 # Initialize
 cdp init
@@ -1095,6 +1115,11 @@ cdp current
 
 # View profile details
 cdp info work
+
+# Interactive alias management (NEW in v1.1.0)
+cdp alias install      # TUI wizard to create/rename aliases
+cdp alias list         # List current aliases
+cdp alias uninstall    # Remove aliases
 
 # Use with Claude
 cdp work --continue
