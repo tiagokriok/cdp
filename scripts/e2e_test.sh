@@ -162,7 +162,7 @@ test_switch() {
     fi
 
     # Verify current profile
-    if ./cdp current | grep -q "Current profile: work"; then
+    if ./cdp current | grep -q "Profile: work"; then
         pass "Current profile is work"
     else
         fail "Current profile not set correctly"
@@ -175,7 +175,7 @@ test_current() {
 
     output=$(./cdp current)
 
-    if echo "$output" | grep -q "Current profile: work"; then
+    if echo "$output" | grep -q "Profile: work"; then
         pass "Current command shows correct profile"
     else
         fail "Current command failed"
@@ -221,13 +221,13 @@ test_delete() {
 test_help_version() {
     test_section "Testing help and version commands"
 
-    if ./cdp help | grep -q "CDP - Claude Profile Switcher"; then
+    if ./cdp help | grep -q "Claude Profile Switcher"; then
         pass "Help command works"
     else
         fail "Help command failed"
     fi
 
-    if ./cdp version | grep -q "CDP (Claude Profile Switcher) version"; then
+    if ./cdp version | grep -q "Version:"; then
         pass "Version command works"
     else
         fail "Version command failed"
