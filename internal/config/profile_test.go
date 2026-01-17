@@ -1,0 +1,310 @@
+package config
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func setupTestEnv(t *testing.T) (*Config, *ProfileManager, func()) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+
+	if err := Init(); err != nil {
+		t.Fatalf("Init() failed: %v", err)
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() failed: %v", err)
+	}
+
+	pm := NewProfileManager(cfg)
+
+	cleanup := func() {
+		os.Setenv("HOME", originalHome)
+	}
+
+	return cfg, pm, cleanup
+}
+
+func TestValidateName(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{"valid simple name", "work", false},
+		{"valid with hyphen", "my-work", false},
+		{"valid with underscore", "my_work", false},
+		{"valid with numbers", "work123", false},
+		{"empty name", "", true},
+		{"too long", "this-is-a-very-long-profile-name-that-exceeds-fifty-characters-limit", true},
+		{"invalid characters", "work@home", true},
+		{"invalid spaces", "my work", true},
+		{"invalid special chars", "work!", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateName(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateName(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestCreateProfile(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create a profile
+	err := pm.CreateProfile("test-profile", "Test description")
+	if err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+
+	// Verify profile directory exists
+	profilePath := filepath.Join(pm.config.ProfilesDir, "test-profile")
+	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
+		t.Error("Profile directory was not created")
+	}
+
+	// Verify metadata file exists
+	metadataPath := filepath.Join(profilePath, MetadataFileName)
+	if _, err := os.Stat(metadataPath); os.IsNotExist(err) {
+		t.Error("Metadata file was not created")
+	}
+
+	// Verify Claude config files exist
+	claudeConfigPath := filepath.Join(profilePath, ClaudeConfigFile)
+	if _, err := os.Stat(claudeConfigPath); os.IsNotExist(err) {
+		t.Error("Claude config file was not created")
+	}
+
+	settingsPath := filepath.Join(profilePath, ClaudeSettingsFile)
+	if _, err := os.Stat(settingsPath); os.IsNotExist(err) {
+		t.Error("Settings file was not created")
+	}
+
+	// Try to create duplicate profile
+	err = pm.CreateProfile("test-profile", "Duplicate")
+	if err == nil {
+		t.Error("Expected error when creating duplicate profile, got nil")
+	}
+}
+
+func TestDeleteProfile(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create a profile first
+	if err := pm.CreateProfile("delete-me", "To be deleted"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+
+	// Delete the profile
+	err := pm.DeleteProfile("delete-me")
+	if err != nil {
+		t.Fatalf("DeleteProfile() failed: %v", err)
+	}
+
+	// Verify profile directory no longer exists
+	profilePath := filepath.Join(pm.config.ProfilesDir, "delete-me")
+	if _, err := os.Stat(profilePath); !os.IsNotExist(err) {
+		t.Error("Profile directory still exists after deletion")
+	}
+
+	// Try to delete non-existent profile
+	err = pm.DeleteProfile("non-existent")
+	if err == nil {
+		t.Error("Expected error when deleting non-existent profile, got nil")
+	}
+}
+
+func TestDeleteCurrentProfile(t *testing.T) {
+	cfg, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create a profile and set it as current
+	if err := pm.CreateProfile("current", "Current profile"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+
+	if err := cfg.SetCurrentProfile("current"); err != nil {
+		t.Fatalf("SetCurrentProfile() failed: %v", err)
+	}
+
+	// Try to delete the current profile
+	err := pm.DeleteProfile("current")
+	if err == nil {
+		t.Error("Expected error when deleting current profile, got nil")
+	}
+}
+
+func TestListProfiles(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Initially should be empty
+	profiles, err := pm.ListProfiles()
+	if err != nil {
+		t.Fatalf("ListProfiles() failed: %v", err)
+	}
+	if len(profiles) != 0 {
+		t.Errorf("Expected 0 profiles, got %d", len(profiles))
+	}
+
+	// Create some profiles
+	if err := pm.CreateProfile("work", "Work profile"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+	if err := pm.CreateProfile("personal", "Personal profile"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+
+	// List profiles
+	profiles, err = pm.ListProfiles()
+	if err != nil {
+		t.Fatalf("ListProfiles() failed: %v", err)
+	}
+	if len(profiles) != 2 {
+		t.Errorf("Expected 2 profiles, got %d", len(profiles))
+	}
+
+	// Verify profile names
+	names := make(map[string]bool)
+	for _, p := range profiles {
+		names[p.Name] = true
+	}
+	if !names["work"] || !names["personal"] {
+		t.Error("Expected profiles 'work' and 'personal' in list")
+	}
+}
+
+func TestGetProfile(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create a profile
+	description := "Test profile"
+	if err := pm.CreateProfile("test", description); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+
+	// Get the profile
+	profile, err := pm.GetProfile("test")
+	if err != nil {
+		t.Fatalf("GetProfile() failed: %v", err)
+	}
+
+	// Verify profile details
+	if profile.Name != "test" {
+		t.Errorf("Expected name 'test', got '%s'", profile.Name)
+	}
+	if profile.Metadata.Description != description {
+		t.Errorf("Expected description '%s', got '%s'", description, profile.Metadata.Description)
+	}
+	if profile.Metadata.CreatedAt.IsZero() {
+		t.Error("CreatedAt timestamp should not be zero")
+	}
+
+	// Try to get non-existent profile
+	_, err = pm.GetProfile("non-existent")
+	if err == nil {
+		t.Error("Expected error when getting non-existent profile, got nil")
+	}
+}
+
+func TestUpdateLastUsed(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create a profile
+	if err := pm.CreateProfile("test", "Test profile"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+
+	// Get profile before update
+	profile1, err := pm.GetProfile("test")
+	if err != nil {
+		t.Fatalf("GetProfile() failed: %v", err)
+	}
+
+	if !profile1.Metadata.LastUsed.IsZero() {
+		t.Error("LastUsed should be zero initially")
+	}
+
+	// Update last used
+	if err := pm.UpdateLastUsed("test"); err != nil {
+		t.Fatalf("UpdateLastUsed() failed: %v", err)
+	}
+
+	// Get profile after update
+	profile2, err := pm.GetProfile("test")
+	if err != nil {
+		t.Fatalf("GetProfile() failed: %v", err)
+	}
+
+	if profile2.Metadata.LastUsed.IsZero() {
+		t.Error("LastUsed should not be zero after update")
+	}
+}
+
+func TestValidateProfile(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create a valid profile
+	if err := pm.CreateProfile("test", "Test profile"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+
+	profile, err := pm.GetProfile("test")
+	if err != nil {
+		t.Fatalf("GetProfile() failed: %v", err)
+	}
+
+	// Validate the profile
+	if err := pm.ValidateProfile(profile); err != nil {
+		t.Errorf("ValidateProfile() failed for valid profile: %v", err)
+	}
+
+	// Create an invalid profile (missing files)
+	invalidProfilePath := filepath.Join(pm.config.ProfilesDir, "invalid")
+	if err := os.MkdirAll(invalidProfilePath, 0755); err != nil {
+		t.Fatalf("Failed to create invalid profile dir: %v", err)
+	}
+
+	invalidProfile := &Profile{
+		Name: "invalid",
+		Path: invalidProfilePath,
+	}
+
+	// Should fail validation
+	if err := pm.ValidateProfile(invalidProfile); err == nil {
+		t.Error("Expected validation error for invalid profile, got nil")
+	}
+}
+
+func TestProfileExists(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Should not exist initially
+	if pm.ProfileExists("test") {
+		t.Error("ProfileExists() returned true for non-existent profile")
+	}
+
+	// Create profile
+	if err := pm.CreateProfile("test", "Test profile"); err != nil {
+		t.Fatalf("CreateProfile() failed: %v", err)
+	}
+
+	// Should exist now
+	if !pm.ProfileExists("test") {
+		t.Error("ProfileExists() returned false for existing profile")
+	}
+}
