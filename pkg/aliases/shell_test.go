@@ -29,8 +29,8 @@ func TestNew(t *testing.T) {
 
 func TestNewWithShell(t *testing.T) {
 	tests := []struct {
-		shellType     ShellType
-		expectedFile  string
+		shellType    ShellType
+		expectedFile string
 	}{
 		{Bash, ".bashrc"},
 		{Zsh, ".zshrc"},

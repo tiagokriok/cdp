@@ -39,3 +39,13 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&noRun, "no-run", false, "Switch profile without running Claude")
 }
+
+// GetRootCmd returns the root command for testing purposes
+func GetRootCmd() *cobra.Command {
+	return rootCmd
+}
+
+// ResetRootCmd resets the root command state for testing
+func ResetRootCmd() {
+	noRun = false
+}

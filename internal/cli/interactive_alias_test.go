@@ -7,11 +7,11 @@ import (
 
 func TestValidateAlias(t *testing.T) {
 	tests := []struct {
-		name           string
-		alias          string
+		name            string
+		alias           string
 		existingAliases map[string]string
-		wantErr        bool
-		errMsg         string
+		wantErr         bool
+		errMsg          string
 	}{
 		{
 			name:            "valid simple alias",
@@ -230,46 +230,46 @@ func TestMinInt(t *testing.T) {
 
 func TestValidateAliasEdgeCases(t *testing.T) {
 	tests := []struct {
-		name             string
-		alias            string
-		existingAliases  map[string]string
-		shouldBeValid    bool
+		name            string
+		alias           string
+		existingAliases map[string]string
+		shouldBeValid   bool
 	}{
 		{
-			name:             "single character valid",
-			alias:            "c",
-			existingAliases:  map[string]string{},
-			shouldBeValid:    true,
+			name:            "single character valid",
+			alias:           "c",
+			existingAliases: map[string]string{},
+			shouldBeValid:   true,
 		},
 		{
-			name:             "number only",
-			alias:            "123",
-			existingAliases:  map[string]string{},
-			shouldBeValid:    true,
+			name:            "number only",
+			alias:           "123",
+			existingAliases: map[string]string{},
+			shouldBeValid:   true,
 		},
 		{
-			name:             "hyphen at start",
-			alias:            "-work",
-			existingAliases:  map[string]string{},
-			shouldBeValid:    true,
+			name:            "hyphen at start",
+			alias:           "-work",
+			existingAliases: map[string]string{},
+			shouldBeValid:   true,
 		},
 		{
-			name:             "underscore at start",
-			alias:            "_work",
-			existingAliases:  map[string]string{},
-			shouldBeValid:    true,
+			name:            "underscore at start",
+			alias:           "_work",
+			existingAliases: map[string]string{},
+			shouldBeValid:   true,
 		},
 		{
-			name:             "multiple hyphens",
-			alias:            "my--work",
-			existingAliases:  map[string]string{},
-			shouldBeValid:    true,
+			name:            "multiple hyphens",
+			alias:           "my--work",
+			existingAliases: map[string]string{},
+			shouldBeValid:   true,
 		},
 		{
-			name:             "multiple underscores",
-			alias:            "my__work",
-			existingAliases:  map[string]string{},
-			shouldBeValid:    true,
+			name:            "multiple underscores",
+			alias:           "my__work",
+			existingAliases: map[string]string{},
+			shouldBeValid:   true,
 		},
 	}
 

@@ -10,15 +10,15 @@ import (
 )
 
 type model struct {
-	profiles      []config.Profile
+	profiles       []config.Profile
 	currentProfile string
-	cursor        int
-	selected      bool
+	cursor         int
+	selected       bool
 }
 
 func initialModel(profiles []config.Profile, current string) model {
 	return model{
-		profiles:      profiles,
+		profiles:       profiles,
 		currentProfile: current,
 	}
 }

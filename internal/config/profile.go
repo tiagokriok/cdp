@@ -459,11 +459,11 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 
 	// Categorize files
 	var (
-		foundClaudeConfig   bool
-		foundSettings       bool
-		foundMetadata       bool
-		otherFiles          []string
-		skippedDirs         []string
+		foundClaudeConfig bool
+		foundSettings     bool
+		foundMetadata     bool
+		otherFiles        []string
+		skippedDirs       []string
 	)
 
 	for _, entry := range entries {

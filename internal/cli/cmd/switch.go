@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/tiagokriok/cdp/internal/cli"
 )
@@ -10,19 +12,27 @@ var switchCmd = &cobra.Command{
 	Short: "Switch to a different profile (internal use)",
 	Long: `Switches the active profile and executes Claude.
 This command is intended for internal use and is hidden from the help menu.`,
-	Hidden: true,
-	Args:   cobra.MinimumNArgs(1),
+	Hidden:             true,
+	DisableFlagParsing: true, // Pass all args through unchanged to support Claude flags
 	RunE: func(cmd *cobra.Command, args []string) error {
-		profileName := args[0]
-		claudeFlags := args[1:]
+		// Manually extract --no-run flag since DisableFlagParsing is true
+		var filteredArgs []string
+		noRunFlag := false
+		for _, arg := range args {
+			if arg == "--no-run" {
+				noRunFlag = true
+			} else {
+				filteredArgs = append(filteredArgs, arg)
+			}
+		}
 
-		// noRun is a persistent flag on the root command, so its value
-		// is populated in the global 'noRun' variable.
-		return cli.HandleSwitch(profileName, claudeFlags, noRun)
-	},
-	// Allow passthrough flags for claude
-	FParseErrWhitelist: cobra.FParseErrWhitelist{
-		UnknownFlags: true,
+		if len(filteredArgs) == 0 {
+			return fmt.Errorf("profile name is required")
+		}
+
+		profileName := filteredArgs[0]
+		claudeFlags := filteredArgs[1:]
+		return cli.HandleSwitch(profileName, claudeFlags, noRunFlag)
 	},
 }
 

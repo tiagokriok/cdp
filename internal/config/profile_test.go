@@ -638,9 +638,9 @@ func TestImportProfile_InvalidProfileName(t *testing.T) {
 
 	// Test invalid profile names
 	invalidNames := []string{
-		"",                    // empty
-		"test@invalid",        // invalid char
-		"my work",             // space
+		"",                      // empty
+		"test@invalid",          // invalid char
+		"my work",               // space
 		strings.Repeat("a", 51), // too long
 	}
 

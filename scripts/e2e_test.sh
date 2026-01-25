@@ -263,6 +263,64 @@ test_error_handling() {
     fi
 }
 
+# Test flag passthrough to Claude
+test_flag_passthrough() {
+    test_section "Testing flag passthrough to Claude"
+
+    # Create a mock claude script that echoes its arguments
+    MOCK_DIR=$(mktemp -d)
+    MOCK_CLAUDE="$MOCK_DIR/claude"
+    cat > "$MOCK_CLAUDE" << 'SCRIPT'
+#!/bin/bash
+echo "CLAUDE_ARGS: $@"
+echo "CLAUDE_CONFIG_DIR: $CLAUDE_CONFIG_DIR"
+SCRIPT
+    chmod +x "$MOCK_CLAUDE"
+
+    # Prepend mock dir to PATH so our mock claude is found first
+    OLD_PATH="$PATH"
+    export PATH="$MOCK_DIR:$PATH"
+
+    # Test 1: Single flag passthrough
+    output1=$(./cdp personal --continue 2>&1)
+    if echo "$output1" | grep -q "CLAUDE_ARGS:.*--continue"; then
+        pass "Single Claude flag passed through"
+    else
+        fail "Single Claude flag not passed through"
+        echo "Output was: $output1"
+    fi
+
+    # Test 2: Multiple flags passthrough
+    output2=$(./cdp personal --continue --verbose 2>&1)
+    if echo "$output2" | grep -q "CLAUDE_ARGS:.*--continue" && echo "$output2" | grep -q "CLAUDE_ARGS:.*--verbose"; then
+        pass "Multiple Claude flags passed through"
+    else
+        fail "Multiple Claude flags not passed through"
+        echo "Output was: $output2"
+    fi
+
+    # Test 3: CLAUDE_CONFIG_DIR is set correctly
+    if echo "$output2" | grep -q "CLAUDE_CONFIG_DIR:.*personal"; then
+        pass "CLAUDE_CONFIG_DIR set correctly"
+    else
+        fail "CLAUDE_CONFIG_DIR not set correctly"
+        echo "Output was: $output2"
+    fi
+
+    # Test 4: Flags with values
+    output3=$(./cdp personal --model gpt-4 --temperature 0.5 2>&1)
+    if echo "$output3" | grep -q "CLAUDE_ARGS:.*--model.*gpt-4" && echo "$output3" | grep -q "CLAUDE_ARGS:.*--temperature.*0.5"; then
+        pass "Flags with values passed through"
+    else
+        fail "Flags with values not passed through"
+        echo "Output was: $output3"
+    fi
+
+    # Restore PATH and cleanup
+    export PATH="$OLD_PATH"
+    rm -rf "$MOCK_DIR"
+}
+
 # Test import command
 test_import() {
     test_section "Testing import command"
@@ -347,6 +405,7 @@ main() {
     test_current
     test_delete
     test_import
+    test_flag_passthrough
     test_help_version
     test_error_handling
 

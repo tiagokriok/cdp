@@ -470,8 +470,8 @@ func TestBackupWithSubdirectories(t *testing.T) {
 
 	// Create files
 	files := map[string]string{
-		"settings.json":       `{"key": "value"}`,
-		"subdir/nested.json":  `{"nested": true}`,
+		"settings.json":      `{"key": "value"}`,
+		"subdir/nested.json": `{"nested": true}`,
 	}
 	for name, content := range files {
 		path := filepath.Join(testProfileDir, name)
