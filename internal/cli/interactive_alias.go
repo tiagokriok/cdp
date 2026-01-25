@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/tiagokriok/cdp/internal/config"
 	"github.com/tiagokriok/cdp/internal/ui"
 	"github.com/tiagokriok/cdp/pkg/aliases"
@@ -21,19 +21,19 @@ const (
 )
 
 type aliasWizardModel struct {
-	step             wizardStep
-	profiles         []config.Profile
-	cursor           int
-	aliasInput       textinput.Model
-	selectedProfile  string
-	suggestion       string
-	validationErr    string
-	aliases          map[string]string
-	existingAliases  map[string]string // Track already-configured aliases
-	shellType        string
-	completed        bool
-	focusInput       bool // Flag to focus input on next render
-	isRenaming       bool // True if renaming existing alias, false if creating new
+	step            wizardStep
+	profiles        []config.Profile
+	cursor          int
+	aliasInput      textinput.Model
+	selectedProfile string
+	suggestion      string
+	validationErr   string
+	aliases         map[string]string
+	existingAliases map[string]string // Track already-configured aliases
+	shellType       string
+	completed       bool
+	focusInput      bool // Flag to focus input on next render
+	isRenaming      bool // True if renaming existing alias, false if creating new
 }
 
 func initialWizardModel(profiles []config.Profile, shellType string, existingAliases map[string]string) aliasWizardModel {
@@ -269,7 +269,7 @@ func (m aliasWizardModel) viewAliasInput() string {
 	b.WriteString(m.aliasInput.View() + "\n\n")
 
 	if m.validationErr != "" {
-		b.WriteString(ui.ErrorStyle.Render("✗ " + m.validationErr) + "\n")
+		b.WriteString(ui.ErrorStyle.Render("✗ "+m.validationErr) + "\n")
 	} else if m.aliasInput.Value() != "" {
 		b.WriteString(ui.SuccessStyle.Render("✓ Valid alias") + "\n")
 	}
