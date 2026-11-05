@@ -20,6 +20,7 @@ type Config struct {
 	Version        string `yaml:"version"`
 	ProfilesDir    string `yaml:"profilesDir"`
 	CurrentProfile string `yaml:"currentProfile,omitempty"`
+	Rules          []Rule `yaml:"rules,omitempty"`
 }
 
 // GetConfigDir returns the hat configuration directory path

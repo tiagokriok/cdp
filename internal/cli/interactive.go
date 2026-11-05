@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/charmbracelet/bubbletea"
 	"github.com/tiagokriok/hat/internal/config"
@@ -75,7 +76,6 @@ func (m model) View() string {
 	return s
 }
 
-// RunInteractiveMenu starts the Bubble Tea TUI to select a profile
 func RunInteractiveMenu(noRun bool) error {
 	cfg, err := loadConfig()
 	if err != nil {
@@ -83,6 +83,13 @@ func RunInteractiveMenu(noRun bool) error {
 			return HandleInit()
 		}
 		return err
+	}
+
+	if cwd, err := os.Getwd(); err == nil {
+		if rule := cfg.MatchRule(cwd); rule != nil {
+			ui.Info(fmt.Sprintf("Using profile %s (rule: %s)", rule.Profile, rule.Path))
+			return HandleSwitch(rule.Profile, nil, noRun)
+		}
 	}
 
 	pm := config.NewProfileManager(cfg)
