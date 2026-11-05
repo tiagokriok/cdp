@@ -157,3 +157,25 @@ func Exists() bool {
 	_, err = os.Stat(configPath)
 	return err == nil
 }
+
+const legacyConfigDirName = ".cdp"
+
+func MigrateLegacyConfigDir() (bool, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return false, fmt.Errorf("failed to get user home directory: %w", err)
+	}
+	newDir := filepath.Join(home, ConfigDirName)
+	oldDir := filepath.Join(home, legacyConfigDirName)
+
+	if _, err := os.Stat(newDir); err == nil {
+		return false, nil
+	}
+	if _, err := os.Stat(oldDir); err != nil {
+		return false, nil
+	}
+	if err := os.Rename(oldDir, newDir); err != nil {
+		return false, fmt.Errorf("failed to migrate %s to %s: %w", oldDir, newDir, err)
+	}
+	return true, nil
+}

@@ -170,3 +170,68 @@ func TestGetDefaultProfilesDir(t *testing.T) {
 		t.Errorf("Expected profiles dir %s, got %s", expected, profilesDir)
 	}
 }
+
+func TestMigrateLegacyConfigDir(t *testing.T) {
+	setup := func(t *testing.T, oldExists, newExists bool) string {
+		home := t.TempDir()
+		t.Setenv("HOME", home)
+		if oldExists {
+			if err := os.MkdirAll(filepath.Join(home, ".cdp"), 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(home, ".cdp", "config.yaml"), []byte("old"), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if newExists {
+			if err := os.MkdirAll(filepath.Join(home, ".hat"), 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(home, ".hat", "config.yaml"), []byte("new"), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return home
+	}
+
+	t.Run("moves old dir when new is absent", func(t *testing.T) {
+		home := setup(t, true, false)
+		migrated, err := MigrateLegacyConfigDir()
+		if err != nil || !migrated {
+			t.Fatalf("migrated=%v err=%v", migrated, err)
+		}
+		data, err := os.ReadFile(filepath.Join(home, ".hat", "config.yaml"))
+		if err != nil || string(data) != "old" {
+			t.Fatalf("data=%q err=%v", data, err)
+		}
+		if _, err := os.Stat(filepath.Join(home, ".cdp")); !os.IsNotExist(err) {
+			t.Fatal("old dir should be gone")
+		}
+	})
+
+	t.Run("noop when neither exists", func(t *testing.T) {
+		home := setup(t, false, false)
+		migrated, err := MigrateLegacyConfigDir()
+		if err != nil || migrated {
+			t.Fatalf("migrated=%v err=%v", migrated, err)
+		}
+		if _, err := os.Stat(filepath.Join(home, ".hat")); !os.IsNotExist(err) {
+			t.Fatal("new dir should not be created")
+		}
+	})
+
+	t.Run("keeps both when both exist", func(t *testing.T) {
+		home := setup(t, true, true)
+		migrated, err := MigrateLegacyConfigDir()
+		if err != nil || migrated {
+			t.Fatalf("migrated=%v err=%v", migrated, err)
+		}
+		data, _ := os.ReadFile(filepath.Join(home, ".hat", "config.yaml"))
+		if string(data) != "new" {
+			t.Fatalf("new dir modified: %q", data)
+		}
+		if _, err := os.Stat(filepath.Join(home, ".cdp", "config.yaml")); err != nil {
+			t.Fatal("old dir should be untouched")
+		}
+	})
+}
