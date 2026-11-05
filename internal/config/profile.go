@@ -328,7 +328,6 @@ func (pm *ProfileManager) CloneProfile(source, dest string) error {
 		return fmt.Errorf("invalid destination name: %w", err)
 	}
 
-	// Check source exists
 	sourceProfile, err := pm.GetProfile(source)
 	if err != nil {
 		return fmt.Errorf("source profile '%s' does not exist", source)
@@ -336,48 +335,28 @@ func (pm *ProfileManager) CloneProfile(source, dest string) error {
 
 	destPath := filepath.Join(pm.config.ProfilesDir, dest)
 
-	// Check dest doesn't exist
 	if _, err := os.Stat(destPath); err == nil {
 		return fmt.Errorf("profile '%s' already exists", dest)
 	}
 
-	// Create dest directory
 	if err := os.MkdirAll(destPath, 0755); err != nil {
 		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
-	// Copy all files from source to dest
-	entries, err := os.ReadDir(sourceProfile.Path)
-	if err != nil {
+	if _, _, err := copyProfileTree(sourceProfile.Path, destPath); err != nil {
 		os.RemoveAll(destPath)
-		return fmt.Errorf("failed to read source directory: %w", err)
+		return fmt.Errorf("failed to copy profile: %w", err)
 	}
 
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue // Skip subdirectories
-		}
-
-		srcFile := filepath.Join(sourceProfile.Path, entry.Name())
-		dstFile := filepath.Join(destPath, entry.Name())
-
-		data, err := os.ReadFile(srcFile)
-		if err != nil {
-			os.RemoveAll(destPath)
-			return fmt.Errorf("failed to read file %s: %w", entry.Name(), err)
-		}
-
-		if err := os.WriteFile(dstFile, data, 0644); err != nil {
-			os.RemoveAll(destPath)
-			return fmt.Errorf("failed to write file %s: %w", entry.Name(), err)
-		}
+	if err := rewritePluginPaths(sourcePrefixes(sourceProfile.Path), destPath); err != nil {
+		os.RemoveAll(destPath)
+		return err
 	}
 
-	// Update metadata for the cloned profile
 	newMetadata := sourceProfile.Metadata
 	newMetadata.CreatedAt = time.Now()
-	newMetadata.LastUsed = time.Time{} // Reset last used
-	newMetadata.UsageCount = 0         // Reset usage count
+	newMetadata.LastUsed = time.Time{}
+	newMetadata.UsageCount = 0
 	newMetadata.Description = fmt.Sprintf("Cloned from %s", source)
 
 	if err := pm.saveMetadata(destPath, newMetadata); err != nil {
@@ -421,12 +400,10 @@ func (pm *ProfileManager) RenameProfile(oldName, newName string) error {
 
 // ImportProfile imports an existing Claude configuration into a new profile
 func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) error {
-	// 1. VALIDATE INPUTS
 	if err := ValidateName(name); err != nil {
 		return fmt.Errorf("invalid profile name: %w", err)
 	}
 
-	// Expand ~ in source path
 	if strings.HasPrefix(sourcePath, "~/") {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -441,13 +418,11 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 		sourcePath = home
 	}
 
-	// Convert to absolute path
 	absSourcePath, err := filepath.Abs(sourcePath)
 	if err != nil {
 		return fmt.Errorf("failed to resolve source path: %w", err)
 	}
 
-	// Validate source exists and is a directory
 	sourceInfo, err := os.Stat(absSourcePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -459,31 +434,42 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 		return fmt.Errorf("source path '%s' is not a directory", sourcePath)
 	}
 
-	// 2. CHECK DESTINATION
 	destPath := filepath.Join(pm.config.ProfilesDir, name)
 	profileExists := false
 	if _, err := os.Stat(destPath); err == nil {
 		profileExists = true
 	}
 
-	// 3. SCAN SOURCE DIRECTORY (for preview)
 	entries, err := os.ReadDir(absSourcePath)
 	if err != nil {
 		return fmt.Errorf("failed to read source directory: %w", err)
 	}
 
-	// Categorize files
 	var (
 		foundClaudeConfig bool
 		foundSettings     bool
 		foundMetadata     bool
 		otherFiles        []string
-		skippedDirs       []string
+		copiedDirs        []string
+		excluded          []string
+		topSymlinks       []string
 	)
 
 	for _, entry := range entries {
+		if entry.Name() == MetadataFileName {
+			foundMetadata = true
+			continue
+		}
+		if IsExcludedEntry(entry.Name()) {
+			excluded = append(excluded, entry.Name())
+			continue
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			topSymlinks = append(topSymlinks, entry.Name())
+			continue
+		}
 		if entry.IsDir() {
-			skippedDirs = append(skippedDirs, entry.Name())
+			copiedDirs = append(copiedDirs, entry.Name())
 			continue
 		}
 
@@ -492,14 +478,11 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 			foundClaudeConfig = true
 		case ClaudeSettingsFile:
 			foundSettings = true
-		case MetadataFileName:
-			foundMetadata = true
 		default:
 			otherFiles = append(otherFiles, entry.Name())
 		}
 	}
 
-	// 4. INTERACTIVE VALIDATION PREVIEW
 	fmt.Println()
 	fmt.Println("ℹ Import Preview")
 	fmt.Println(strings.Repeat("─", 60))
@@ -534,71 +517,55 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 		fileCount++
 	}
 
-	if len(skippedDirs) > 0 {
-		fmt.Printf("\nSkipped subdirectories: %s\n", strings.Join(skippedDirs, ", "))
+	if len(copiedDirs) > 0 {
+		fmt.Printf("\nSubdirectories to copy: %s\n", strings.Join(copiedDirs, ", "))
+	}
+	if len(excluded) > 0 {
+		fmt.Printf("Excluded (runtime/cache/history): %s\n", strings.Join(excluded, ", "))
+	}
+	if len(topSymlinks) > 0 {
+		fmt.Printf("Symlinks skipped: %s\n", strings.Join(topSymlinks, ", "))
 	}
 
-	fmt.Printf("\nTotal files to copy: %d\n", fileCount)
+	fmt.Printf("\nTop-level files to copy: %d\n", fileCount)
 
-	// Warn if no Claude config found
 	if !foundClaudeConfig {
 		fmt.Println("\n⚠ Warning: No .claude.json found - this may not be a valid Claude configuration directory")
 	}
 
-	// 5. OVERWRITE CONFIRMATION
 	if profileExists {
 		fmt.Printf("\n⚠ Profile '%s' already exists!\n", name)
 		if !promptYesNo("Overwrite existing profile?", false) {
 			return fmt.Errorf("import cancelled by user")
 		}
-		// Remove existing profile
 		if err := os.RemoveAll(destPath); err != nil {
 			return fmt.Errorf("failed to remove existing profile: %w", err)
 		}
 	}
 
-	// 6. IMPORT CONFIRMATION
 	if !promptYesNo("\nProceed with import?", true) {
 		return fmt.Errorf("import cancelled by user")
 	}
 
-	// 7. CREATE DESTINATION DIRECTORY
 	if err := os.MkdirAll(destPath, 0755); err != nil {
 		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
-	// 8. COPY FILES
 	fmt.Println("\nImporting files...")
-	copiedCount := 0
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		srcFile := filepath.Join(absSourcePath, entry.Name())
-		dstFile := filepath.Join(destPath, entry.Name())
-
-		// Skip metadata file - we'll create our own
-		if entry.Name() == MetadataFileName {
-			continue
-		}
-
-		data, err := os.ReadFile(srcFile)
-		if err != nil {
-			os.RemoveAll(destPath)
-			return fmt.Errorf("failed to read file %s: %w", entry.Name(), err)
-		}
-
-		if err := os.WriteFile(dstFile, data, 0644); err != nil {
-			os.RemoveAll(destPath)
-			return fmt.Errorf("failed to write file %s: %w", entry.Name(), err)
-		}
-
-		fmt.Printf("  ✓ Copied %s\n", entry.Name())
-		copiedCount++
+	copiedCount, symlinks, err := copyProfileTree(absSourcePath, destPath)
+	if err != nil {
+		os.RemoveAll(destPath)
+		return fmt.Errorf("failed to copy profile: %w", err)
+	}
+	if err := rewritePluginPaths(sourcePrefixes(absSourcePath), destPath); err != nil {
+		os.RemoveAll(destPath)
+		return err
+	}
+	fmt.Printf("  ✓ Copied %d files\n", copiedCount)
+	for _, link := range symlinks {
+		fmt.Printf("  ~ Skipped symlink %s\n", link)
 	}
 
-	// 9. CREATE MISSING REQUIRED FILES
 	if !foundClaudeConfig {
 		claudeConfigPath := filepath.Join(destPath, ClaudeConfigFile)
 		if err := os.WriteFile(claudeConfigPath, []byte("{}"), 0644); err != nil {
@@ -617,17 +584,15 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 		fmt.Printf("  + Created empty %s\n", ClaudeSettingsFile)
 	}
 
-	// 10. CREATE/UPDATE METADATA
 	metadata := ProfileMetadata{
 		CreatedAt:   time.Now(),
 		Description: description,
 		UsageCount:  0,
-		Template:    "", // No template for imported profiles
+		Template:    "",
 	}
 
-	// Preserve template/customFlags if metadata was imported
 	if foundMetadata {
-		importedMetadata, err := pm.loadMetadata(destPath)
+		importedMetadata, err := pm.loadMetadata(absSourcePath)
 		if err == nil {
 			metadata.Template = importedMetadata.Template
 			metadata.CustomFlags = importedMetadata.CustomFlags
@@ -640,7 +605,6 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 	}
 	fmt.Printf("  ✓ Created %s\n", MetadataFileName)
 
-	// 11. ASK ABOUT REMOVING ORIGINAL
 	fmt.Printf("\nℹ Original files are still in: %s\n", absSourcePath)
 	if promptYesNo("Remove original files?", false) {
 		if err := os.RemoveAll(absSourcePath); err != nil {
