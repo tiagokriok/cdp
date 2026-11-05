@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tiagokriok/hat/internal/cli" // Import internal/cli to access HandleDelete
 	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/prompt"
 )
 
 func TestDeleteCmd(t *testing.T) {
@@ -105,5 +106,26 @@ func TestDeleteCmd_InvalidProfileName(t *testing.T) {
 	err = pm.DeleteProfile("invalid@name")
 	if err == nil {
 		t.Error("Should fail with invalid profile name")
+	}
+}
+
+func TestDeleteCmd_AssumeYesSkipsPrompt(t *testing.T) {
+	cleanup := setupTestEnv(t)
+	defer cleanup()
+	if err := config.Init(); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _ := config.Load()
+	pm := config.NewProfileManager(cfg)
+	pm.CreateProfile("gone", "")
+
+	prompt.SetAssumeYes(true)
+	defer prompt.SetAssumeYes(false)
+	defer mockStdin("")()
+	if err := cli.HandleDelete("gone"); err != nil {
+		t.Fatal(err)
+	}
+	if pm.ProfileExists("gone") {
+		t.Error("profile should be deleted under --yes")
 	}
 }

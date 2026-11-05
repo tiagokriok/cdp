@@ -166,7 +166,7 @@ hat now leverages the [Cobra](https://cobra.dev/) CLI framework for robust argum
 -   **Commands**: `init`, `create`, `list` (`ls`), `delete` (`rm`), `current`, `info`, `clone`, `rename`, `diff`, `templates`, `alias`, `backup`, `completion`, `help`, `version`, `switch` (hidden).
 -   **Implicit Switch**: Any unknown first argument (not a subcommand or a flag) is treated as a profile name for an implicit `switch` command. The `main.go` pre-parser automatically injects the `switch` subcommand (e.g., `hat work` is internally executed as `hat switch work`).
 -   **Interactive Mode**: Running `hat` without any arguments or flags launches an interactive TUI menu for profile selection.
--   `--no-run` flag is consumed by hat, all other flags pass through to Claude.
+-   `--no-run` and `--yes`/`-y` are consumed by hat, all other flags pass through to Claude. `--yes` makes `prompt.Confirm` return yes without reading stdin; `prompt.Ask` (import's "remove original files") keeps its default.
 
 Example: `hat work --continue --verbose --no-run`
 -   This command is pre-parsed by `main.go` into `hat switch work --continue --verbose --no-run`.

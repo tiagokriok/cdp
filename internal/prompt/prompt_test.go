@@ -8,7 +8,10 @@ import (
 func setup(t *testing.T, input string) {
 	t.Helper()
 	restore := SetInput(strings.NewReader(input))
-	t.Cleanup(restore)
+	t.Cleanup(func() {
+		restore()
+		SetAssumeYes(false)
+	})
 }
 
 func TestSharedReaderAnswersPromptsInOrder(t *testing.T) {
@@ -32,5 +35,25 @@ func TestEmptyLineAndEOFUseDefault(t *testing.T) {
 	}
 	if Ask("c", false) {
 		t.Error("EOF should return default no")
+	}
+}
+
+func TestConfirmAssumeYesSkipsInput(t *testing.T) {
+	setup(t, "n\n")
+	SetAssumeYes(true)
+	if !Confirm("a", false) {
+		t.Error("Confirm should auto-yes")
+	}
+	SetAssumeYes(false)
+	if Confirm("b", true) {
+		t.Error("input n should have been left unread and answer no")
+	}
+}
+
+func TestAskIgnoresAssumeYes(t *testing.T) {
+	setup(t, "y\n")
+	SetAssumeYes(true)
+	if Ask("remove?", false) {
+		t.Error("Ask must keep default under --yes")
 	}
 }

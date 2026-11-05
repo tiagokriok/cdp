@@ -131,6 +131,7 @@ hat alias install
 | Flag | Scope | Description |
 |---|---|---|
 | `--no-run`, `-nr` | `switch` / implicit | Switch profile without launching Claude |
+| `--yes`, `-y` | all commands | Auto-confirm prompts (delete, import overwrite/proceed, `shared add`). "Remove original files?" after import stays "no". Not forwarded to Claude |
 | `--template`, `-t` | `create` | Apply template (restrictive/permissive) |
 | `--import-from` | `create` | Import existing Claude config directory (copies subdirectories, excludes runtime/cache/history such as `projects`, `todos`, `cache`, `history.jsonl`; symlinks skipped) |
 | `--description`, `-d` | `create` | Profile description |

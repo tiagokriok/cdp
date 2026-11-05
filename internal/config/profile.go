@@ -538,7 +538,7 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 
 	if profileExists {
 		fmt.Printf("\n⚠ Profile '%s' already exists!\n", name)
-		if !prompt.Ask("Overwrite existing profile?", false) {
+		if !prompt.Confirm("Overwrite existing profile?", false) {
 			return fmt.Errorf("import cancelled by user")
 		}
 		if err := os.RemoveAll(destPath); err != nil {
@@ -546,7 +546,7 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 		}
 	}
 
-	if !prompt.Ask("\nProceed with import?", true) {
+	if !prompt.Confirm("\nProceed with import?", true) {
 		return fmt.Errorf("import cancelled by user")
 	}
 

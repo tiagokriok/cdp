@@ -10,9 +10,16 @@ import (
 )
 
 var (
-	mu     sync.Mutex
-	reader *bufio.Reader
+	mu        sync.Mutex
+	reader    *bufio.Reader
+	assumeYes bool
 )
+
+func SetAssumeYes(v bool) {
+	mu.Lock()
+	defer mu.Unlock()
+	assumeYes = v
+}
 
 func SetInput(r io.Reader) func() {
 	mu.Lock()
@@ -26,15 +33,36 @@ func SetInput(r io.Reader) func() {
 	}
 }
 
+func Confirm(question string, defaultYes bool) bool {
+	mu.Lock()
+	auto := assumeYes
+	mu.Unlock()
+	if auto {
+		fmt.Printf("%s yes (--yes)\n", strings.TrimLeft(question, "\n"))
+		return true
+	}
+	return Ask(question, defaultYes)
+}
+
+func answerWord(v bool) string {
+	if v {
+		return "yes"
+	}
+	return "no"
+}
+
 func Ask(question string, defaultYes bool) bool {
 	choice := "y/N"
 	if defaultYes {
 		choice = "Y/n"
 	}
-	fmt.Printf("%s [%s]: ", question, choice)
-
 	mu.Lock()
 	defer mu.Unlock()
+	if assumeYes {
+		fmt.Printf("%s %s (default, --yes)\n", strings.TrimLeft(question, "\n"), answerWord(defaultYes))
+		return defaultYes
+	}
+	fmt.Printf("%s [%s]: ", question, choice)
 	if reader == nil {
 		reader = bufio.NewReader(os.Stdin)
 	}

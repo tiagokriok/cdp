@@ -120,12 +120,11 @@ func HandleDelete(name string) error {
 
 	pm := config.NewProfileManager(cfg)
 
-	// Check if profile exists
 	if !pm.ProfileExists(name) {
 		return fmt.Errorf("profile '%s' does not exist", name)
 	}
 
-	if !prompt.Ask(fmt.Sprintf("Are you sure you want to delete profile '%s'?", name), false) {
+	if !prompt.Confirm(fmt.Sprintf("Are you sure you want to delete profile '%s'?", name), false) {
 		ui.Info("Deletion cancelled.")
 		return nil
 	}

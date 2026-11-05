@@ -144,7 +144,7 @@ var sharedAddCmd = &cobra.Command{
 		if err := config.ValidateSharedKind(args[0]); err != nil {
 			return err
 		}
-		if !prompt.Ask(fmt.Sprintf("Move %s into the shared layer and replace it with a symlink?", args[1]), false) {
+		if !prompt.Confirm(fmt.Sprintf("Move %s into the shared layer and replace it with a symlink?", args[1]), false) {
 			ui.Info("Cancelled")
 			return nil
 		}

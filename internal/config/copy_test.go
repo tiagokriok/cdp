@@ -207,3 +207,24 @@ func TestImportProfile_PipedAnswersReachEveryPrompt(t *testing.T) {
 		})
 	}
 }
+
+func TestImportProfile_AssumeYesKeepsOriginals(t *testing.T) {
+	_, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+	if err := pm.CreateProfile("imp", ""); err != nil {
+		t.Fatal(err)
+	}
+	src := t.TempDir()
+	writeTree(t, src, map[string]string{".claude.json": "{}", "settings.json": "{}"})
+
+	prompt.SetAssumeYes(true)
+	defer prompt.SetAssumeYes(false)
+	var err error
+	withStdin(t, "y\ny\ny\n", func() { err = pm.ImportProfile(src, "imp", "d") })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists(src) {
+		t.Error("--yes must not remove original files")
+	}
+}
