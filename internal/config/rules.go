@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -58,7 +59,7 @@ func (c *Config) RemoveRule(path string) bool {
 	key := ResolveRulePath(path)
 	for i := range c.Rules {
 		if ResolveRulePath(c.Rules[i].Path) == key {
-			c.Rules = append(c.Rules[:i], c.Rules[i+1:]...)
+			c.Rules = slices.Delete(c.Rules, i, i+1)
 			return true
 		}
 	}

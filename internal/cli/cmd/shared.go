@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 
@@ -122,12 +124,7 @@ var sharedSyncCmd = &cobra.Command{
 			return err
 		}
 		all, err := pm.SyncAllShared()
-		names := make([]string, 0, len(all))
-		for n := range all {
-			names = append(names, n)
-		}
-		sort.Strings(names)
-		for _, n := range names {
+		for _, n := range slices.Sorted(maps.Keys(all)) {
 			printSyncResult(n, all[n])
 		}
 		return err

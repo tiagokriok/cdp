@@ -3,9 +3,11 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/url"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"text/tabwriter"
@@ -78,26 +80,12 @@ func (s mcpServer) keysOf(field string) string {
 	if !ok || len(m) == 0 {
 		return ""
 	}
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return field + ": " + strings.Join(keys, ", ")
-}
-
-func sortedNames(m map[string]mcpServer) []string {
-	names := make([]string, 0, len(m))
-	for n := range m {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-	return names
+	return field + ": " + strings.Join(slices.Sorted(maps.Keys(m)), ", ")
 }
 
 func printServers(servers map[string]mcpServer) {
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	for _, name := range sortedNames(servers) {
+	for _, name := range slices.Sorted(maps.Keys(servers)) {
 		s := servers[name]
 		var extras []string
 		for _, f := range []string{"env", "headers"} {
@@ -110,7 +98,7 @@ func printServers(servers map[string]mcpServer) {
 	_ = tw.Flush()
 }
 
-func resolveMCPProfile(cfg *config.Config, name string) (string, error) {
+func ResolveProfileName(cfg *config.Config, name string) (string, error) {
 	if name != "" {
 		return name, nil
 	}
@@ -125,7 +113,7 @@ func HandleMCP(profileName string, all bool) error {
 	if err != nil {
 		return err
 	}
-	profileName, err = resolveMCPProfile(cfg, profileName)
+	profileName, err = ResolveProfileName(cfg, profileName)
 	if err != nil {
 		return err
 	}
@@ -194,7 +182,7 @@ func HandleMCPDiff(a, b string) error {
 	}
 
 	var onlyA, onlyB, different []string
-	for _, n := range sortedNames(ma.Servers) {
+	for _, n := range slices.Sorted(maps.Keys(ma.Servers)) {
 		sb, ok := mb.Servers[n]
 		if !ok {
 			onlyA = append(onlyA, n)
@@ -204,7 +192,7 @@ func HandleMCPDiff(a, b string) error {
 			different = append(different, fmt.Sprintf("%s (%s)", n, strings.Join(fields, ", ")))
 		}
 	}
-	for _, n := range sortedNames(mb.Servers) {
+	for _, n := range slices.Sorted(maps.Keys(mb.Servers)) {
 		if _, ok := ma.Servers[n]; !ok {
 			onlyB = append(onlyB, n)
 		}

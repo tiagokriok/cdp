@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -25,10 +26,8 @@ func SharedKinds() []string {
 }
 
 func ValidateSharedKind(kind string) error {
-	for _, k := range SharedKinds() {
-		if k == kind {
-			return nil
-		}
+	if slices.Contains(SharedKinds(), kind) {
+		return nil
 	}
 	return fmt.Errorf("invalid kind '%s', valid: %s", kind, strings.Join(SharedKinds(), ", "))
 }
@@ -72,25 +71,15 @@ func (pm *ProfileManager) SetSharedKinds(name string, kinds []string, enable boo
 	if err != nil {
 		return err
 	}
-	changing := map[string]bool{}
-	for _, k := range kinds {
-		changing[k] = true
-	}
-	seen := map[string]bool{}
-	var next []string
-	for _, k := range profile.Metadata.Shared {
-		if !seen[k] && !(changing[k] && !enable) {
-			next = append(next, k)
-			seen[k] = true
-		}
-	}
+	next := slices.Clone(profile.Metadata.Shared)
 	if enable {
 		for _, k := range kinds {
-			if !seen[k] {
+			if !slices.Contains(next, k) {
 				next = append(next, k)
-				seen[k] = true
 			}
 		}
+	} else {
+		next = slices.DeleteFunc(next, func(k string) bool { return slices.Contains(kinds, k) })
 	}
 	profile.Metadata.Shared = next
 	return pm.saveMetadata(profile.Path, profile.Metadata)
@@ -259,13 +248,17 @@ func (pm *ProfileManager) AddToShared(kind, path string) (string, error) {
 		return "", fmt.Errorf("%s is already a symlink", abs)
 	}
 
+	sharedDir, err := GetSharedDir()
+	if err != nil {
+		return "", err
+	}
 	owner := filepath.Dir(abs)
-	dest := filepath.Join(sharedRoot(), kind, filepath.Base(abs))
+	dest := filepath.Join(sharedDir, kind, filepath.Base(abs))
 	if kind == SharedClaudeMD {
 		if filepath.Base(abs) != SharedClaudeMD {
 			return "", fmt.Errorf("%s is not a %s file", abs, SharedClaudeMD)
 		}
-		dest = filepath.Join(sharedRoot(), SharedClaudeMD)
+		dest = filepath.Join(sharedDir, SharedClaudeMD)
 	} else {
 		if filepath.Base(owner) != kind {
 			return "", fmt.Errorf("%s is not inside a '%s' directory", abs, kind)
@@ -290,11 +283,6 @@ func (pm *ProfileManager) AddToShared(kind, path string) (string, error) {
 		return "", fmt.Errorf("failed to link back: %w", err)
 	}
 	return profile.Name, pm.SetSharedKinds(profile.Name, []string{kind}, true)
-}
-
-func sharedRoot() string {
-	sd, _ := GetSharedDir()
-	return sd
 }
 
 func (pm *ProfileManager) profileAt(dir string) (*Profile, error) {

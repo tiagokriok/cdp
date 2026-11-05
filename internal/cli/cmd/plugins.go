@@ -7,6 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
+	"github.com/tiagokriok/hat/internal/cli"
 	"github.com/tiagokriok/hat/internal/config"
 	"github.com/tiagokriok/hat/internal/ui"
 )
@@ -19,12 +20,13 @@ func yesNo(b bool) string {
 }
 
 func profileForArg(cfg *config.Config, pm *config.ProfileManager, args []string) (*config.Profile, error) {
-	name := cfg.GetCurrentProfile()
+	name := ""
 	if len(args) > 0 {
 		name = args[0]
 	}
-	if name == "" {
-		return nil, fmt.Errorf("no current profile, pass a profile name")
+	name, err := cli.ResolveProfileName(cfg, name)
+	if err != nil {
+		return nil, err
 	}
 	return pm.GetProfile(name)
 }

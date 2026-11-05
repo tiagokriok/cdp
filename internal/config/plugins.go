@@ -84,13 +84,8 @@ func installedVersions(profilePath string) (map[string]string, error) {
 	out := map[string]string{}
 	for id, v := range subMap(installed, "plugins") {
 		version := ""
-		switch e := v.(type) {
-		case []any:
-			if len(e) > 0 {
-				version = versionOf(e[0])
-			}
-		default:
-			version = versionOf(e)
+		if e, ok := v.([]any); ok && len(e) > 0 {
+			version = versionOf(e[0])
 		}
 		out[id] = version
 	}

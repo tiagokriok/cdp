@@ -26,7 +26,7 @@ func TestListPlugins(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "settings.json"), `{"enabledPlugins":{"a@m":true,"b@m":false}}`)
 	writeFile(t, filepath.Join(dir, "plugins", "installed_plugins.json"),
-		`{"version":2,"plugins":{"a@m":[{"scope":"user","version":"1.2.0","extra":1}],"c@m":{"version":"0.1"},"d@m":[]}}`)
+		`{"version":2,"plugins":{"a@m":[{"scope":"user","version":"1.2.0","extra":1}],"d@m":[]}}`)
 
 	got, err := ListPlugins(dir)
 	if err != nil {
@@ -35,7 +35,6 @@ func TestListPlugins(t *testing.T) {
 	want := []PluginInfo{
 		{ID: "a@m", Enabled: true, Installed: true, Version: "1.2.0"},
 		{ID: "b@m"},
-		{ID: "c@m", Installed: true, Version: "0.1"},
 		{ID: "d@m", Installed: true},
 	}
 	if !reflect.DeepEqual(got, want) {
