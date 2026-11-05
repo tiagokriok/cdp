@@ -194,3 +194,30 @@ func TestBuildEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestAuthEnvOverrides(t *testing.T) {
+	tests := []struct {
+		name string
+		env  []string
+		want []string
+	}{
+		{"none", []string{"PATH=/bin"}, nil},
+		{"empty value ignored", []string{"ANTHROPIC_API_KEY="}, nil},
+		{"one set", []string{"PATH=/bin", "ANTHROPIC_API_KEY=sk-secret"}, []string{"ANTHROPIC_API_KEY"}},
+		{"all set", []string{"CLAUDE_CODE_OAUTH_TOKEN=x", "ANTHROPIC_AUTH_TOKEN=y", "ANTHROPIC_API_KEY=z"}, []string{"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"}},
+		{"prefix lookalike ignored", []string{"ANTHROPIC_API_KEY_OTHER=1"}, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := AuthEnvOverrides(tt.env)
+			if len(got) != len(tt.want) {
+				t.Fatalf("AuthEnvOverrides() = %v, want %v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("got %v, want %v", got, tt.want)
+				}
+			}
+		})
+	}
+}

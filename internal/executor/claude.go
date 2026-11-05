@@ -48,6 +48,21 @@ func (e *Executor) Run(profilePath string, flags []string) error {
 	return nil
 }
 
+var AuthEnvVars = []string{"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"}
+
+func AuthEnvOverrides(env []string) []string {
+	var set []string
+	for _, name := range AuthEnvVars {
+		for _, kv := range env {
+			if v, ok := strings.CutPrefix(kv, name+"="); ok && v != "" {
+				set = append(set, name)
+				break
+			}
+		}
+	}
+	return set
+}
+
 func BuildEnv(base []string, profilePath string, isDefault bool) []string {
 	env := make([]string, 0, len(base)+2)
 	for _, kv := range base {

@@ -198,7 +198,6 @@ func HandleInfo(name string) error {
 	return nil
 }
 
-// HandleSwitch switches to a profile and optionally runs Claude
 func HandleSwitch(name string, claudeFlags []string, noRun bool) error {
 	cfg, err := loadConfig()
 	if err != nil {
@@ -237,6 +236,10 @@ func HandleSwitch(name string, claudeFlags []string, noRun bool) error {
 	if noRun {
 		ui.Info("Use 'claude' to start Claude Code with this profile.")
 		return nil
+	}
+
+	if overrides := executor.AuthEnvOverrides(os.Environ()); len(overrides) > 0 {
+		ui.Warn(fmt.Sprintf("%s set in environment, overriding this profile's login", strings.Join(overrides, ", ")))
 	}
 
 	ui.Info("Starting Claude Code...")
