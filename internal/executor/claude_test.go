@@ -3,6 +3,7 @@ package executor
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -160,5 +161,36 @@ func TestRun_WithInvalidClaude(t *testing.T) {
 	err := e.Run(profilePath, []string{})
 	if err == nil {
 		t.Error("Run() should fail when claude binary doesn't exist")
+	}
+}
+
+func TestBuildEnv(t *testing.T) {
+	base := []string{"PATH=/bin", "CLAUDE_CONFIG_DIR=/stale", "CLAUDE_PROFILE=old"}
+	tests := []struct {
+		name      string
+		isDefault bool
+		want      []string
+		notWant   string
+	}{
+		{"custom profile sets config dir", false, []string{"PATH=/bin", "CLAUDE_CONFIG_DIR=/p/work", "CLAUDE_PROFILE=work"}, "/stale"},
+		{"default profile omits config dir", true, []string{"PATH=/bin", "CLAUDE_PROFILE=work"}, "CLAUDE_CONFIG_DIR"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := BuildEnv(base, "/p/work", tt.isDefault)
+			if len(got) != len(tt.want) {
+				t.Fatalf("BuildEnv() = %v, want %v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("BuildEnv()[%d] = %q, want %q", i, got[i], tt.want[i])
+				}
+			}
+			for _, kv := range got {
+				if strings.Contains(kv, tt.notWant) {
+					t.Errorf("env contains %q: %v", tt.notWant, got)
+				}
+			}
+		})
 	}
 }

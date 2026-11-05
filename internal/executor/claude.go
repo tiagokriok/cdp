@@ -5,6 +5,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+
+	"github.com/tiagokriok/cdp/internal/config"
 )
 
 var SystemLocations = []string{
@@ -13,17 +16,14 @@ var SystemLocations = []string{
 	"/opt/homebrew/bin/claude",
 }
 
-// Executor handles execution of Claude Code
 type Executor struct {
 	claudePath string
 }
 
-// NewExecutor creates a new executor
 func NewExecutor() *Executor {
 	return &Executor{}
 }
 
-// Run executes Claude Code with the specified profile
 func (e *Executor) Run(profilePath string, flags []string) error {
 	claudePath, err := e.FindClaude()
 	if err != nil {
@@ -32,11 +32,7 @@ func (e *Executor) Run(profilePath string, flags []string) error {
 
 	cmd := exec.Command(claudePath, flags...)
 
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, fmt.Sprintf("CLAUDE_CONFIG_DIR=%s", profilePath))
-
-	profileName := filepath.Base(profilePath)
-	cmd.Env = append(cmd.Env, fmt.Sprintf("CLAUDE_PROFILE=%s", profileName))
+	cmd.Env = BuildEnv(os.Environ(), profilePath, config.IsDefaultClaudeDir(profilePath))
 
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -50,6 +46,20 @@ func (e *Executor) Run(profilePath string, flags []string) error {
 	}
 
 	return nil
+}
+
+func BuildEnv(base []string, profilePath string, isDefault bool) []string {
+	env := make([]string, 0, len(base)+2)
+	for _, kv := range base {
+		if strings.HasPrefix(kv, "CLAUDE_CONFIG_DIR=") || strings.HasPrefix(kv, "CLAUDE_PROFILE=") {
+			continue
+		}
+		env = append(env, kv)
+	}
+	if !isDefault {
+		env = append(env, "CLAUDE_CONFIG_DIR="+profilePath)
+	}
+	return append(env, "CLAUDE_PROFILE="+filepath.Base(profilePath))
 }
 
 func (e *Executor) FindClaude() (string, error) {
@@ -83,7 +93,6 @@ func (e *Executor) FindClaude() (string, error) {
 	return "", fmt.Errorf("claude executable not found. Please ensure Claude Code is installed and in your PATH")
 }
 
-// SetClaudePath manually sets the path to the Claude executable
 func (e *Executor) SetClaudePath(path string) {
 	e.claudePath = path
 }

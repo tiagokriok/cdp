@@ -737,3 +737,54 @@ func TestImportProfile_PreservesImportedMetadata(t *testing.T) {
 
 	_ = pm
 }
+
+func TestDefaultProfileSymlink(t *testing.T) {
+	cfg, pm, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	home := os.Getenv("HOME")
+	defaultDir := filepath.Join(home, ".claude")
+	if err := os.MkdirAll(defaultDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{ClaudeConfigFile, ClaudeSettingsFile} {
+		if err := os.WriteFile(filepath.Join(defaultDir, f), []byte("{}"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(defaultDir, MetadataFileName), []byte(`{"usageCount":0}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(cfg.ProfilesDir, "work")
+	if err := os.Symlink(defaultDir, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := pm.CreateProfile("other", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	p, err := pm.GetProfile("work")
+	if err != nil {
+		t.Fatalf("GetProfile() error = %v", err)
+	}
+	if err := pm.ValidateProfile(p); err != nil {
+		t.Errorf("ValidateProfile() error = %v", err)
+	}
+	profiles, err := pm.ListProfiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(profiles) != 2 {
+		t.Errorf("ListProfiles() = %d profiles, want 2", len(profiles))
+	}
+	if !IsDefaultClaudeDir(p.Path) {
+		t.Error("symlinked profile should be default Claude dir")
+	}
+	other, _ := pm.GetProfile("other")
+	if IsDefaultClaudeDir(other.Path) {
+		t.Error("regular profile should not be default Claude dir")
+	}
+	if IsDefaultClaudeDir(filepath.Join(home, "missing")) {
+		t.Error("missing path should not be default Claude dir")
+	}
+}

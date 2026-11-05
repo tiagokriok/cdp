@@ -40,6 +40,22 @@ type Profile struct {
 	Metadata ProfileMetadata
 }
 
+func IsDefaultClaudeDir(path string) bool {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return false
+	}
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return false
+	}
+	def, err := filepath.EvalSymlinks(filepath.Join(home, ".claude"))
+	if err != nil {
+		return false
+	}
+	return resolved == def
+}
+
 // ProfileManager handles profile operations
 type ProfileManager struct {
 	config *Config
@@ -172,12 +188,11 @@ func (pm *ProfileManager) ListProfiles() ([]Profile, error) {
 
 	var profiles []Profile
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
 		name := entry.Name()
 		profilePath := filepath.Join(pm.config.ProfilesDir, name)
+		if info, err := os.Stat(profilePath); err != nil || !info.IsDir() {
+			continue
+		}
 
 		// Load metadata
 		metadata, err := pm.loadMetadata(profilePath)
