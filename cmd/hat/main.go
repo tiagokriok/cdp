@@ -30,7 +30,8 @@ func rewriteImplicitSwitch(args []string) []string {
 	knownCommands := []string{
 		"init", "create", "list", "ls", "delete", "rm",
 		"current", "info", "help", "version", "completion",
-		"templates", "alias", "switch", "clone", "rename", "diff", "backup", "shared", "plugins",
+		"templates", "alias", "switch", "clone", "rename", "diff", "backup",
+		"shared", "plugins", "rule", "doctor", "mcp",
 	}
 
 	firstArg := args[1]

@@ -188,7 +188,65 @@ test_current() {
     fi
 }
 
-# Test delete command
+# Test rule command
+test_rule() {
+    test_section "Testing rule command"
+
+    RULE_DIR=$(mktemp -d)
+    HAT_BIN="$PWD/hat"
+
+    output=$(./hat rule add "$RULE_DIR" work 2>&1)
+    if echo "$output" | grep -q "Rule added"; then
+        pass "Rule add"
+    else
+        fail "Rule add failed"
+    fi
+
+    output=$(./hat rule add "$RULE_DIR" ghost 2>&1)
+    if echo "$output" | grep -q "does not exist"; then
+        pass "Rule add rejects unknown profile"
+    else
+        fail "Rule add accepted unknown profile"
+    fi
+
+    output=$(./hat rule list 2>&1)
+    if echo "$output" | grep -q "$RULE_DIR -> work"; then
+        pass "Rule list shows rule"
+    else
+        fail "Rule list missing rule"
+    fi
+
+    output=$(cd "$RULE_DIR" && "$HAT_BIN" rule list 2>&1)
+    if echo "$output" | grep -q "▶"; then
+        pass "Rule list marks matching rule"
+    else
+        fail "Rule list did not mark matching rule"
+    fi
+
+    output=$(cd "$RULE_DIR" && "$HAT_BIN" --no-run 2>&1)
+    if echo "$output" | grep -q "Using profile work"; then
+        pass "Bare hat uses rule"
+    else
+        fail "Bare hat ignored rule"
+    fi
+
+    output=$(./hat rule rm "$RULE_DIR" 2>&1)
+    if echo "$output" | grep -q "Rule removed"; then
+        pass "Rule rm"
+    else
+        fail "Rule rm failed"
+    fi
+
+    output=$(./hat rule list 2>&1)
+    if echo "$output" | grep -q "No rules"; then
+        pass "Rule list empty after rm"
+    else
+        fail "Rule list not empty after rm"
+    fi
+
+    rm -rf "$RULE_DIR"
+}
+
 test_shared_and_plugins() {
     test_section "Testing shared layer and plugins"
 
@@ -230,6 +288,7 @@ test_shared_and_plugins() {
     fi
 }
 
+# Test delete command
 test_delete() {
     test_section "Testing delete command"
 
@@ -450,6 +509,7 @@ main() {
     test_switch
     test_current
     test_shared_and_plugins
+    test_rule
     test_delete
     test_import
     test_flag_passthrough
