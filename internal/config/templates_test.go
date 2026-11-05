@@ -1,8 +1,10 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -214,5 +216,31 @@ func TestLoadTemplate_CustomTemplate(t *testing.T) {
 	}
 	if template == nil {
 		t.Error("template should not be nil")
+	}
+}
+
+func TestEmbeddedTemplates_ValidPermissionRules(t *testing.T) {
+	entries, err := embeddedTemplates.ReadDir("templates")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		data, err := embeddedTemplates.ReadFile("templates/" + entry.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		var tpl struct {
+			Permissions map[string][]string `json:"permissions"`
+		}
+		if err := json.Unmarshal(data, &tpl); err != nil {
+			t.Fatalf("%s: %v", entry.Name(), err)
+		}
+		for kind, rules := range tpl.Permissions {
+			for _, rule := range rules {
+				if strings.Contains(strings.TrimSuffix(rule, ":*)"), ":") {
+					t.Errorf("%s %s rule %q has ':' that is not trailing ':*'", entry.Name(), kind, rule)
+				}
+			}
+		}
 	}
 }
