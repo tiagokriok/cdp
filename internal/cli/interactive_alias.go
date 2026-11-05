@@ -378,6 +378,7 @@ func RunAliasWizard() error {
 
 var reservedCommands = map[string]bool{
 	"cd":     true,
+	"hat":    true,
 	"ls":     true,
 	"cp":     true,
 	"mv":     true,
