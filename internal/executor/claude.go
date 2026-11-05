@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tiagokriok/cdp/internal/config"
+	"github.com/tiagokriok/hat/internal/config"
 )
 
 var SystemLocations = []string{
@@ -66,7 +66,7 @@ func AuthEnvOverrides(env []string) []string {
 func BuildEnv(base []string, profilePath string, isDefault bool) []string {
 	env := make([]string, 0, len(base)+2)
 	for _, kv := range base {
-		if strings.HasPrefix(kv, "CLAUDE_CONFIG_DIR=") || strings.HasPrefix(kv, "CLAUDE_PROFILE=") {
+		if strings.HasPrefix(kv, "CLAUDE_CONFIG_DIR=") || strings.HasPrefix(kv, "HAT_PROFILE=") {
 			continue
 		}
 		env = append(env, kv)
@@ -74,7 +74,7 @@ func BuildEnv(base []string, profilePath string, isDefault bool) []string {
 	if !isDefault {
 		env = append(env, "CLAUDE_CONFIG_DIR="+profilePath)
 	}
-	return append(env, "CLAUDE_PROFILE="+filepath.Base(profilePath))
+	return append(env, "HAT_PROFILE="+filepath.Base(profilePath))
 }
 
 func (e *Executor) FindClaude() (string, error) {

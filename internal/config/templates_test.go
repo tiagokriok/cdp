@@ -194,7 +194,7 @@ func TestApplyTemplate_Permissive(t *testing.T) {
 
 func TestLoadTemplate_CustomTemplate(t *testing.T) {
 	tmpDir := t.TempDir()
-	customDir := filepath.Join(tmpDir, ".cdp", "templates")
+	customDir := filepath.Join(tmpDir, ".hat", "templates")
 	os.MkdirAll(customDir, 0755)
 
 	// Create a custom template file

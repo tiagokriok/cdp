@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/bubbletea"
-	"github.com/tiagokriok/cdp/internal/config"
-	"github.com/tiagokriok/cdp/internal/ui"
+	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/ui"
 )
 
 type model struct {
@@ -93,7 +93,7 @@ func RunInteractiveMenu(noRun bool) error {
 
 	if len(profiles) == 0 {
 		ui.Info("No profiles found. Let's create one.")
-		fmt.Println("Run `cdp create <name> [description]` to get started.")
+		fmt.Println("Run `hat create <name> [description]` to get started.")
 		return nil
 	}
 

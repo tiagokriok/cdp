@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/config"
-	"github.com/tiagokriok/cdp/internal/ui"
+	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/ui"
 )
 
 // renameCmd represents the rename command
@@ -18,7 +18,7 @@ Note: You cannot rename the currently active profile.
 Switch to another profile first.
 
 Example:
-  cdp rename old-work new-work`,
+  hat rename old-work new-work`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		oldName := args[0]
@@ -26,7 +26,7 @@ Example:
 
 		cfg, err := config.Load()
 		if err != nil {
-			return fmt.Errorf("CDP not initialized. Run 'cdp init' first")
+			return fmt.Errorf("hat not initialized. Run 'hat init' first")
 		}
 
 		pm := config.NewProfileManager(cfg)

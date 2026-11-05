@@ -4,15 +4,15 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/config"
-	"github.com/tiagokriok/cdp/internal/ui"
+	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/ui"
 )
 
 // templatesCmd represents the templates command
 var templatesCmd = &cobra.Command{
 	Use:   "templates",
 	Short: "List available profile templates",
-	Long:  `Lists all built-in and custom profile templates that can be used with 'cdp create --template'.`,
+	Long:  `Lists all built-in and custom profile templates that can be used with 'hat create --template'.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tm := config.NewTemplateManager()
 		templates, err := tm.ListTemplates()
@@ -31,7 +31,7 @@ var templatesCmd = &cobra.Command{
 			fmt.Printf("  - %s\n", name)
 		}
 		fmt.Println()
-		fmt.Println("Use with: cdp create <name> --template <template-name>")
+		fmt.Println("Use with: hat create <name> --template <template-name>")
 		return nil
 	},
 }

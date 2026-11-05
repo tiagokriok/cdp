@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/tiagokriok/cdp/internal/config"
+	"github.com/tiagokriok/hat/internal/config"
 )
 
 var (
@@ -63,7 +63,7 @@ func PrintProfileList(profiles []config.Profile, currentProfile string) {
 		Info("No profiles found.")
 		fmt.Println()
 		fmt.Println("Create a profile:")
-		fmt.Println("  cdp create <name> [description]")
+		fmt.Println("  hat create <name> [description]")
 		return
 	}
 

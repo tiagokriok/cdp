@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tiagokriok/cdp/internal/config"
+	"github.com/tiagokriok/hat/internal/config"
 )
 
 // BackupManager handles profile backup and restore operations
@@ -36,7 +36,7 @@ func NewBackupManager(profilesDir string) (*BackupManager, error) {
 		return nil, fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	backupDir := filepath.Join(homeDir, ".cdp", "backups")
+	backupDir := filepath.Join(homeDir, ".hat", "backups")
 
 	// Ensure backup directory exists
 	if err := os.MkdirAll(backupDir, 0755); err != nil {

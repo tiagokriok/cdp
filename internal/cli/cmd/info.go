@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/cli"
-	"github.com/tiagokriok/cdp/internal/config"
+	"github.com/tiagokriok/hat/internal/cli"
+	"github.com/tiagokriok/hat/internal/config"
 )
 
 // infoCmd represents the info command

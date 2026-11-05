@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tiagokriok/cdp/internal/config"
-	"github.com/tiagokriok/cdp/internal/executor"
+	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/executor"
 )
 
 func TestLoadConfig_NotInitializedSentinel(t *testing.T) {

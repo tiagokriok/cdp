@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/cli"
+	"github.com/tiagokriok/hat/internal/cli"
 )
 
 var switchCmd = &cobra.Command{

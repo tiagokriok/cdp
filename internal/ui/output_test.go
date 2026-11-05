@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tiagokriok/cdp/internal/config"
+	"github.com/tiagokriok/hat/internal/config"
 )
 
 // captureOutput captures stdout during a function execution

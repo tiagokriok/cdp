@@ -1,4 +1,4 @@
-module github.com/tiagokriok/cdp
+module github.com/tiagokriok/hat
 
 go 1.25.5
 

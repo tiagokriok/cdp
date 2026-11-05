@@ -7,31 +7,31 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tiagokriok/cdp/internal/config"
-	"github.com/tiagokriok/cdp/internal/executor"
-	"github.com/tiagokriok/cdp/internal/ui"
+	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/executor"
+	"github.com/tiagokriok/hat/internal/ui"
 )
 
-var ErrNotInitialized = errors.New("CDP is not initialized. Run 'cdp init' first")
+var ErrNotInitialized = errors.New("hat is not initialized. Run 'hat init' first")
 
-// HandleInit initializes the CDP configuration
+// HandleInit initializes the hat configuration
 func HandleInit() error {
 	if config.Exists() {
-		ui.Info("CDP is already initialized.")
+		ui.Info("hat is already initialized.")
 		fmt.Println("Configuration directory:", getConfigDirOrEmpty())
 		fmt.Println("Profiles directory:", getProfilesDirOrEmpty())
 		return nil
 	}
 
 	if err := config.Init(); err != nil {
-		return fmt.Errorf("failed to initialize CDP: %w", err)
+		return fmt.Errorf("failed to initialize hat: %w", err)
 	}
 
-	ui.Success("CDP initialized successfully!")
+	ui.Success("hat initialized successfully!")
 	fmt.Println("Configuration directory:", getConfigDirOrEmpty())
 	fmt.Println("Profiles directory:", getProfilesDirOrEmpty())
 	fmt.Println("\nGet started by creating a profile:")
-	fmt.Println("  cdp create <name> [description]")
+	fmt.Println("  hat create <name> [description]")
 
 	return nil
 }
@@ -63,7 +63,7 @@ func HandleCreateWithTemplate(name, description, template string) error {
 	}
 	fmt.Printf("Location: %s\n", cfg.GetProfilesDir()+"/"+name)
 	fmt.Println("\nSwitch to this profile:")
-	fmt.Printf("  cdp %s\n", name)
+	fmt.Printf("  hat %s\n", name)
 
 	return nil
 }
@@ -87,7 +87,7 @@ func HandleImport(sourcePath, name, description string) error {
 	}
 	fmt.Printf("Location: %s\n", cfg.GetProfilesDir()+"/"+name)
 	fmt.Println("\nSwitch to this profile:")
-	fmt.Printf("  cdp %s\n", name)
+	fmt.Printf("  hat %s\n", name)
 
 	return nil
 }
@@ -159,7 +159,7 @@ func HandleCurrent() error {
 	if currentProfile == "" {
 		ui.Info("No profile is currently active.")
 		fmt.Println("\nSwitch to a profile:")
-		fmt.Println("  cdp <profile-name>")
+		fmt.Println("  hat <profile-name>")
 		return nil
 	}
 

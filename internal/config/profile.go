@@ -510,7 +510,7 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 		fmt.Printf("  ✗ %s (will create empty placeholder)\n", ClaudeSettingsFile)
 	}
 	if foundMetadata {
-		fmt.Printf("  ~ %s (will overwrite with new CDP metadata)\n", MetadataFileName)
+		fmt.Printf("  ~ %s (will overwrite with new hat metadata)\n", MetadataFileName)
 	}
 	for _, fileName := range otherFiles {
 		fmt.Printf("  ✓ %s\n", fileName)

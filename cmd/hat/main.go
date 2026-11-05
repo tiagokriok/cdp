@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tiagokriok/cdp/internal/cli/cmd"
+	"github.com/tiagokriok/hat/internal/cli/cmd"
 )
 
 var (

@@ -10,19 +10,19 @@ import (
 
 const (
 	ConfigVersion   = "1.0"
-	ConfigDirName   = ".cdp"
+	ConfigDirName   = ".hat"
 	ConfigFileName  = "config.yaml"
 	ProfilesDirName = ".claude-profiles"
 )
 
-// Config represents the global CDP configuration
+// Config represents the global hat configuration
 type Config struct {
 	Version        string `yaml:"version"`
 	ProfilesDir    string `yaml:"profilesDir"`
 	CurrentProfile string `yaml:"currentProfile,omitempty"`
 }
 
-// GetConfigDir returns the CDP configuration directory path
+// GetConfigDir returns the hat configuration directory path
 func GetConfigDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -49,7 +49,7 @@ func GetDefaultProfilesDir() (string, error) {
 	return filepath.Join(home, ProfilesDirName), nil
 }
 
-// Init initializes the CDP configuration directory and creates a default config
+// Init initializes the hat configuration directory and creates a default config
 func Init() error {
 	configDir, err := GetConfigDir()
 	if err != nil {
@@ -100,7 +100,7 @@ func Load() (*Config, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("config file not found, run 'cdp init' first")
+			return nil, fmt.Errorf("config file not found, run 'hat init' first")
 		}
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -148,7 +148,7 @@ func (c *Config) GetCurrentProfile() string {
 	return c.CurrentProfile
 }
 
-// Exists checks if the CDP configuration has been initialized
+// Exists checks if the hat configuration has been initialized
 func Exists() bool {
 	configPath, err := GetConfigPath()
 	if err != nil {

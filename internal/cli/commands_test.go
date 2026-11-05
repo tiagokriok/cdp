@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/tiagokriok/cdp/internal/config"
+	"github.com/tiagokriok/hat/internal/config"
 )
 
 // mockStdin temporarily replaces os.Stdin with a buffer containing the provided input.

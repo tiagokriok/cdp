@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/config"
-	"github.com/tiagokriok/cdp/internal/ui"
+	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/ui"
 )
 
 // cloneCmd represents the clone command
@@ -20,8 +20,8 @@ The cloned profile will have:
 - New creation timestamp
 
 Example:
-  cdp clone work work-backup
-  cdp clone personal personal-test`,
+  hat clone work work-backup
+  hat clone personal personal-test`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		source := args[0]
@@ -29,7 +29,7 @@ Example:
 
 		cfg, err := config.Load()
 		if err != nil {
-			return fmt.Errorf("CDP not initialized. Run 'cdp init' first")
+			return fmt.Errorf("hat not initialized. Run 'hat init' first")
 		}
 
 		pm := config.NewProfileManager(cfg)

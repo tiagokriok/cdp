@@ -60,7 +60,7 @@ func TestRestoreRejectsUnsafeEntries(t *testing.T) {
 	}{
 		{"parent traversal", tarEntry{name: "../evil", typeflag: tar.TypeReg, body: "x"}},
 		{"nested traversal", tarEntry{name: "a/../../evil", typeflag: tar.TypeReg, body: "x"}},
-		{"absolute path", tarEntry{name: "/tmp/cdp-evil-abs", typeflag: tar.TypeReg, body: "x"}},
+		{"absolute path", tarEntry{name: "/tmp/hat-evil-abs", typeflag: tar.TypeReg, body: "x"}},
 		{"symlink outside", tarEntry{name: "link", typeflag: tar.TypeSymlink, linkname: "../../outside"}},
 		{"symlink absolute", tarEntry{name: "link", typeflag: tar.TypeSymlink, linkname: "/etc/passwd"}},
 		{"hardlink outside", tarEntry{name: "link", typeflag: tar.TypeLink, linkname: "../../outside"}},

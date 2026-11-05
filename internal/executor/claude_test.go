@@ -165,15 +165,15 @@ func TestRun_WithInvalidClaude(t *testing.T) {
 }
 
 func TestBuildEnv(t *testing.T) {
-	base := []string{"PATH=/bin", "CLAUDE_CONFIG_DIR=/stale", "CLAUDE_PROFILE=old"}
+	base := []string{"PATH=/bin", "CLAUDE_CONFIG_DIR=/stale", "HAT_PROFILE=old"}
 	tests := []struct {
 		name      string
 		isDefault bool
 		want      []string
 		notWant   string
 	}{
-		{"custom profile sets config dir", false, []string{"PATH=/bin", "CLAUDE_CONFIG_DIR=/p/work", "CLAUDE_PROFILE=work"}, "/stale"},
-		{"default profile omits config dir", true, []string{"PATH=/bin", "CLAUDE_PROFILE=work"}, "CLAUDE_CONFIG_DIR"},
+		{"custom profile sets config dir", false, []string{"PATH=/bin", "CLAUDE_CONFIG_DIR=/p/work", "HAT_PROFILE=work"}, "/stale"},
+		{"default profile omits config dir", true, []string{"PATH=/bin", "HAT_PROFILE=work"}, "CLAUDE_CONFIG_DIR"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

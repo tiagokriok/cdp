@@ -27,7 +27,7 @@ type TemplateManager struct {
 func NewTemplateManager() *TemplateManager {
 	homeDir, _ := os.UserHomeDir()
 	return &TemplateManager{
-		customTemplatesDir: filepath.Join(homeDir, ".cdp", "templates"),
+		customTemplatesDir: filepath.Join(homeDir, ".hat", "templates"),
 	}
 }
 

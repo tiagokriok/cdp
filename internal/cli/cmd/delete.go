@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/cli"
+	"github.com/tiagokriok/hat/internal/cli"
 )
 
 // deleteCmd represents the delete command

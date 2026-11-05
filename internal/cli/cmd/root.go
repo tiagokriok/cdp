@@ -4,15 +4,15 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/cli"
+	"github.com/tiagokriok/hat/internal/cli"
 )
 
 var noRun bool
 
 var rootCmd = &cobra.Command{
-	Use:   "cdp",
+	Use:   "hat",
 	Short: "A CLI tool to manage multiple Claude Code profiles",
-	Long: `cdp (Claude Profile Switcher) is a Go CLI tool that manages multiple Claude Code profiles,
+	Long: `hat, Claude Code profile switcher is a Go CLI tool that manages multiple Claude Code profiles,
 enabling seamless switching between different configurations.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
