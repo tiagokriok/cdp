@@ -268,3 +268,19 @@ func TestFormatTime(t *testing.T) {
 		})
 	}
 }
+
+func TestPrintProfile_ZeroTimestampsHidden(t *testing.T) {
+	p := config.Profile{Name: "default", Path: "/tmp/default"}
+
+	list := captureOutput(func() { PrintProfileList([]config.Profile{p}, "") })
+	info := captureOutput(func() { PrintProfileInfo(&p, false) })
+
+	for name, out := range map[string]string{"list": list, "info": info} {
+		if strings.Contains(out, "Created") {
+			t.Errorf("%s output should omit Created for zero time: %q", name, out)
+		}
+		if strings.Contains(out, "years ago") || strings.Contains(out, "0001") {
+			t.Errorf("%s output leaks zero time: %q", name, out)
+		}
+	}
+}

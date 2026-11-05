@@ -85,7 +85,9 @@ func PrintProfileList(profiles []config.Profile, currentProfile string) {
 			fmt.Printf("   %s %s\n", DimStyle.Render("│"), DescriptionStyle.Render(profile.Metadata.Description))
 		}
 
-		fmt.Printf("   %s Created: %s\n", DimStyle.Render("│"), TimestampStyle.Render(formatTime(profile.Metadata.CreatedAt)))
+		if !profile.Metadata.CreatedAt.IsZero() {
+			fmt.Printf("   %s Created: %s\n", DimStyle.Render("│"), TimestampStyle.Render(formatTime(profile.Metadata.CreatedAt)))
+		}
 
 		if !profile.Metadata.LastUsed.IsZero() {
 			fmt.Printf("   %s Last used: %s\n", DimStyle.Render("│"), TimestampStyle.Render(formatTime(profile.Metadata.LastUsed)))
@@ -118,9 +120,11 @@ func PrintProfileInfo(profile *config.Profile, isCurrent bool) {
 	fmt.Printf("Location:     %s\n", DimStyle.Render(profile.Path))
 
 	// Created
-	fmt.Printf("Created:      %s (%s)\n",
-		profile.Metadata.CreatedAt.Format("2006-01-02 15:04:05"),
-		TimestampStyle.Render(formatTime(profile.Metadata.CreatedAt)))
+	if !profile.Metadata.CreatedAt.IsZero() {
+		fmt.Printf("Created:      %s (%s)\n",
+			profile.Metadata.CreatedAt.Format("2006-01-02 15:04:05"),
+			TimestampStyle.Render(formatTime(profile.Metadata.CreatedAt)))
+	}
 
 	// Last used
 	if !profile.Metadata.LastUsed.IsZero() {
