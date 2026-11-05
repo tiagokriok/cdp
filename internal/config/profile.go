@@ -31,6 +31,7 @@ type ProfileMetadata struct {
 	UsageCount  int       `json:"usageCount"`
 	Template    string    `json:"template,omitempty"`
 	CustomFlags []string  `json:"customFlags,omitempty"`
+	Shared      []string  `json:"shared,omitempty"`
 }
 
 // Profile represents a Claude Code profile
@@ -618,7 +619,10 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 	return nil
 }
 
-// promptYesNo prompts the user for a yes/no response
+func PromptYesNo(question string, defaultYes bool) bool {
+	return promptYesNo(question, defaultYes)
+}
+
 func promptYesNo(question string, defaultYes bool) bool {
 	defaultChoice := "y/N"
 	if defaultYes {

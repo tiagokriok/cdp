@@ -231,6 +231,14 @@ func HandleSwitch(name string, claudeFlags []string, noRun bool) error {
 		ui.Warn(fmt.Sprintf("Failed to update last used timestamp: %v", err))
 	}
 
+	if res, err := pm.SyncShared(name); err != nil {
+		ui.Warn(fmt.Sprintf("Failed to sync shared layer: %v", err))
+	} else {
+		for _, c := range res.Conflicts {
+			ui.Warn(fmt.Sprintf("Shared %s conflicts with profile's own, keeping profile's", c))
+		}
+	}
+
 	ui.Success(fmt.Sprintf("Switched to profile: %s", name))
 
 	if noRun {

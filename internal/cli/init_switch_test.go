@@ -113,3 +113,31 @@ func TestHandleSwitch_AppliesCustomFlagsBeforeUserFlags(t *testing.T) {
 		t.Errorf("claude args = %v, want %v", got, want)
 	}
 }
+
+func TestHandleSwitch_SyncsSharedLayer(t *testing.T) {
+	tmpDir, cleanup := setupTestEnv(t)
+	defer cleanup()
+	t.Setenv("HOME", tmpDir)
+	if err := config.Init(); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _ := config.Load()
+	pm := config.NewProfileManager(cfg)
+	if err := pm.CreateProfile("one", ""); err != nil {
+		t.Fatal(err)
+	}
+	sd, _ := config.GetSharedDir()
+	if err := os.MkdirAll(filepath.Join(sd, "skills", "s"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := pm.SetSharedKinds("one", []string{"skills"}, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := HandleSwitch("one", nil, true); err != nil {
+		t.Fatal(err)
+	}
+	p, _ := pm.GetProfile("one")
+	if _, err := os.Lstat(filepath.Join(p.Path, "skills", "s")); err != nil {
+		t.Errorf("switch should sync shared links: %v", err)
+	}
+}
