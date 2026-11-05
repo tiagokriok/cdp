@@ -95,7 +95,7 @@ Users can import existing Claude Code configurations into hat using `hat create 
 
 **Key Implementation Details** (`internal/config/profile.go`):
 - `ImportProfile(sourcePath, name, description string) error` - Main import method
-- `promptYesNo(question string, defaultYes bool) bool` - Helper for interactive yes/no prompts
+- `prompt.Ask(question string, defaultYes bool) bool` (`internal/prompt`) - single shared-stdin yes/no prompt used by every caller
 - Absolute paths to the source `plugins/` dir in `plugins/installed_plugins.json` and `plugins/known_marketplaces.json` are rewritten to the destination
 - Template and customFlags from the source `.metadata.json` are preserved
 - All errors trigger cleanup (destination directory removed)

@@ -1,9 +1,9 @@
 package cli
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
+	"github.com/tiagokriok/hat/internal/prompt"
 	"os"
 	"strings"
 
@@ -125,16 +125,7 @@ func HandleDelete(name string) error {
 		return fmt.Errorf("profile '%s' does not exist", name)
 	}
 
-	// Confirm deletion
-	fmt.Printf("Are you sure you want to delete profile '%s'? [y/N]: ", name)
-	reader := bufio.NewReader(os.Stdin)
-	response, err := reader.ReadString('\n')
-	if err != nil {
-		return fmt.Errorf("failed to read input: %w", err)
-	}
-
-	response = strings.TrimSpace(strings.ToLower(response))
-	if response != "y" && response != "yes" {
+	if !prompt.Ask(fmt.Sprintf("Are you sure you want to delete profile '%s'?", name), false) {
 		ui.Info("Deletion cancelled.")
 		return nil
 	}

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/tiagokriok/hat/internal/prompt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -119,15 +120,7 @@ func TestRewritePluginPaths_NoPluginsDir(t *testing.T) {
 
 func withStdin(t *testing.T, input string, fn func()) {
 	t.Helper()
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	w.WriteString(input)
-	w.Close()
-	orig := os.Stdin
-	os.Stdin = r
-	defer func() { os.Stdin = orig }()
+	defer prompt.SetInput(strings.NewReader(input))()
 	fn()
 }
 
@@ -181,5 +174,36 @@ func TestCloneProfile_CopiesSubdirs(t *testing.T) {
 	}
 	if exists(filepath.Join(b, "projects")) {
 		t.Error("projects should be excluded")
+	}
+}
+
+func TestImportProfile_PipedAnswersReachEveryPrompt(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		wantOriginal bool
+	}{
+		{"keep originals", "y\ny\nn\n", true},
+		{"remove originals", "y\ny\ny\n", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, pm, cleanup := setupTestEnv(t)
+			defer cleanup()
+			if err := pm.CreateProfile("imp", ""); err != nil {
+				t.Fatal(err)
+			}
+			src := t.TempDir()
+			writeTree(t, src, map[string]string{".claude.json": "{}", "settings.json": "{}"})
+
+			var err error
+			withStdin(t, tc.input, func() { err = pm.ImportProfile(src, "imp", "d") })
+			if err != nil {
+				t.Fatal(err)
+			}
+			if exists(src) != tc.wantOriginal {
+				t.Errorf("original exists = %v, want %v", exists(src), tc.wantOriginal)
+			}
+		})
 	}
 }

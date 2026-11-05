@@ -1,7 +1,9 @@
 package cmd_test
 
 import (
+	"github.com/tiagokriok/hat/internal/prompt"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -21,15 +23,6 @@ func setupTestEnv(t *testing.T) func() {
 	return cleanup
 }
 
-// mockStdin temporarily replaces os.Stdin with a buffer containing the provided input.
-// It returns a function that restores the original os.Stdin.
 func mockStdin(input string) func() {
-	oldStdin := os.Stdin
-	r, w, _ := os.Pipe()
-	_, _ = w.WriteString(input)
-	_ = w.Close()
-	os.Stdin = r
-	return func() {
-		os.Stdin = oldStdin
-	}
+	return prompt.SetInput(strings.NewReader(input))
 }
