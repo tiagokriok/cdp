@@ -1,12 +1,13 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/charmbracelet/bubbletea"
-	"github.com/tiagokriok/cdp/internal/config"
-	"github.com/tiagokriok/cdp/internal/ui"
+	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/ui"
 )
 
 type model struct {
@@ -75,15 +76,20 @@ func (m model) View() string {
 	return s
 }
 
-// RunInteractiveMenu starts the Bubble Tea TUI to select a profile
-func RunInteractiveMenu() error {
+func RunInteractiveMenu(noRun bool) error {
 	cfg, err := loadConfig()
 	if err != nil {
-		// If not initialized, guide the user
-		if _, ok := err.(interface{ IsNotInitialized() }); ok || os.IsNotExist(err) {
+		if errors.Is(err, ErrNotInitialized) {
 			return HandleInit()
 		}
 		return err
+	}
+
+	if cwd, err := os.Getwd(); err == nil {
+		if rule := cfg.MatchRule(cwd); rule != nil {
+			ui.Info(fmt.Sprintf("Using profile %s (rule: %s)", rule.Profile, rule.Path))
+			return HandleSwitch(rule.Profile, nil, noRun)
+		}
 	}
 
 	pm := config.NewProfileManager(cfg)
@@ -94,9 +100,7 @@ func RunInteractiveMenu() error {
 
 	if len(profiles) == 0 {
 		ui.Info("No profiles found. Let's create one.")
-		// In the future, we could chain into a create profile form.
-		// For now, prompt the user.
-		fmt.Println("Run `cdp create <name> [description]` to get started.")
+		fmt.Println("Run `hat create <name> [description]` to get started.")
 		return nil
 	}
 
@@ -108,12 +112,10 @@ func RunInteractiveMenu() error {
 		return fmt.Errorf("error running interactive menu: %w", err)
 	}
 
-	// Check if a profile was selected
 	if finalModel, ok := m.(model); ok && finalModel.selected {
 		selectedProfile := finalModel.profiles[finalModel.cursor]
-		fmt.Println() // Add a newline for better formatting after TUI exits
-		// Switch profile without running claude
-		return HandleSwitch(selectedProfile.Name, []string{}, true)
+		fmt.Println()
+		return HandleSwitch(selectedProfile.Name, []string{}, noRun)
 	}
 
 	return nil

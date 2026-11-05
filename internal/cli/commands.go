@@ -2,33 +2,36 @@ package cli
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/tiagokriok/cdp/internal/config"
-	"github.com/tiagokriok/cdp/internal/executor"
-	"github.com/tiagokriok/cdp/internal/ui"
+	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/executor"
+	"github.com/tiagokriok/hat/internal/ui"
 )
 
-// HandleInit initializes the CDP configuration
+var ErrNotInitialized = errors.New("hat is not initialized. Run 'hat init' first")
+
+// HandleInit initializes the hat configuration
 func HandleInit() error {
 	if config.Exists() {
-		ui.Info("CDP is already initialized.")
+		ui.Info("hat is already initialized.")
 		fmt.Println("Configuration directory:", getConfigDirOrEmpty())
 		fmt.Println("Profiles directory:", getProfilesDirOrEmpty())
 		return nil
 	}
 
 	if err := config.Init(); err != nil {
-		return fmt.Errorf("failed to initialize CDP: %w", err)
+		return fmt.Errorf("failed to initialize hat: %w", err)
 	}
 
-	ui.Success("CDP initialized successfully!")
+	ui.Success("hat initialized successfully!")
 	fmt.Println("Configuration directory:", getConfigDirOrEmpty())
 	fmt.Println("Profiles directory:", getProfilesDirOrEmpty())
 	fmt.Println("\nGet started by creating a profile:")
-	fmt.Println("  cdp create <name> [description]")
+	fmt.Println("  hat create <name> [description]")
 
 	return nil
 }
@@ -60,7 +63,7 @@ func HandleCreateWithTemplate(name, description, template string) error {
 	}
 	fmt.Printf("Location: %s\n", cfg.GetProfilesDir()+"/"+name)
 	fmt.Println("\nSwitch to this profile:")
-	fmt.Printf("  cdp %s\n", name)
+	fmt.Printf("  hat %s\n", name)
 
 	return nil
 }
@@ -84,7 +87,7 @@ func HandleImport(sourcePath, name, description string) error {
 	}
 	fmt.Printf("Location: %s\n", cfg.GetProfilesDir()+"/"+name)
 	fmt.Println("\nSwitch to this profile:")
-	fmt.Printf("  cdp %s\n", name)
+	fmt.Printf("  hat %s\n", name)
 
 	return nil
 }
@@ -156,7 +159,7 @@ func HandleCurrent() error {
 	if currentProfile == "" {
 		ui.Info("No profile is currently active.")
 		fmt.Println("\nSwitch to a profile:")
-		fmt.Println("  cdp <profile-name>")
+		fmt.Println("  hat <profile-name>")
 		return nil
 	}
 
@@ -195,7 +198,6 @@ func HandleInfo(name string) error {
 	return nil
 }
 
-// HandleSwitch switches to a profile and optionally runs Claude
 func HandleSwitch(name string, claudeFlags []string, noRun bool) error {
 	cfg, err := loadConfig()
 	if err != nil {
@@ -204,27 +206,37 @@ func HandleSwitch(name string, claudeFlags []string, noRun bool) error {
 
 	pm := config.NewProfileManager(cfg)
 
-	// Check if profile exists
 	profile, err := pm.GetProfile(name)
 	if err != nil {
 		return fmt.Errorf("profile '%s' does not exist", name)
 	}
 
-	// Validate profile structure
 	if err := pm.ValidateProfile(profile); err != nil {
 		return fmt.Errorf("profile '%s' is corrupted: %w", name, err)
 	}
 
-	// Update current profile by setting field and saving explicitly
+	exec := executor.NewExecutor()
+	if !noRun {
+		if _, err := exec.FindClaude(); err != nil {
+			return err
+		}
+	}
+
 	cfg.CurrentProfile = name
 	if err := cfg.Save(); err != nil {
 		return fmt.Errorf("failed to save config with new profile: %w", err)
 	}
 
-	// Update last used timestamp
 	if err := pm.UpdateLastUsed(name); err != nil {
-		// Non-fatal error, just log it
 		ui.Warn(fmt.Sprintf("Failed to update last used timestamp: %v", err))
+	}
+
+	if res, err := pm.SyncShared(name); err != nil {
+		ui.Warn(fmt.Sprintf("Failed to sync shared layer: %v", err))
+	} else {
+		for _, c := range res.Conflicts {
+			ui.Warn(fmt.Sprintf("Shared %s conflicts with profile's own, keeping profile's", c))
+		}
 	}
 
 	ui.Success(fmt.Sprintf("Switched to profile: %s", name))
@@ -234,17 +246,19 @@ func HandleSwitch(name string, claudeFlags []string, noRun bool) error {
 		return nil
 	}
 
-	// Run Claude Code
+	if overrides := executor.AuthEnvOverrides(os.Environ()); len(overrides) > 0 {
+		ui.Warn(fmt.Sprintf("%s set in environment, overriding this profile's login", strings.Join(overrides, ", ")))
+	}
+
 	ui.Info("Starting Claude Code...")
-	exec := executor.NewExecutor()
-	return exec.Run(profile.Path, claudeFlags)
+	return exec.Run(profile.Path, append(append([]string{}, profile.Metadata.CustomFlags...), claudeFlags...))
 }
 
 // Helper functions
 
 func loadConfig() (*config.Config, error) {
 	if !config.Exists() {
-		return nil, fmt.Errorf("CDP is not initialized. Run 'cdp init' first")
+		return nil, ErrNotInitialized
 	}
 	return config.Load()
 }

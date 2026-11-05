@@ -1,11 +1,11 @@
 
-# Claude Profile Switcher (`cdp`) - Implementation Plan
+# Claude Profile Switcher (`hat`) - Implementation Plan
 
 ## Project Overview
 
 A CLI tool to manage multiple Claude Code profiles with seamless switching and flag passthrough capabilities.
 
-**Name:** `cdp` (Claude Profile)
+**Name:** `hat` (Claude Profile)
 **Language:** Go
 **Target:** macOS, Linux, Windows
 
@@ -19,7 +19,7 @@ A CLI tool to manage multiple Claude Code profiles with seamless switching and f
 ### Completed (Tier 1 - MVP v0.1.0)
 - ✅ **Phase 1:** Core Foundation
   - ✅ Project setup (Go module, directory structure, Makefile)
-  - ✅ Global configuration system (`~/.cdp/config.yaml`)
+  - ✅ Global configuration system (`~/.hat/config.yaml`)
   - ✅ Profile storage directory (`~/.claude-profiles/`)
 - ✅ **Phase 2:** Profile Management (Core CRUD)
   - ✅ Create, list, delete profiles
@@ -36,7 +36,7 @@ A CLI tool to manage multiple Claude Code profiles with seamless switching and f
   - ✅ Error handling and user prompts
 - ✅ **Phase 5:** Claude Code Executor
   - ✅ Execute Claude with profile environment
-  - ✅ Environment variable setting (CLAUDE_CONFIG_DIR, CLAUDE_PROFILE)
+  - ✅ Environment variable setting (CLAUDE_CONFIG_DIR, HAT_PROFILE)
   - ✅ Flag passthrough
   - ✅ Claude executable detection
 
@@ -47,7 +47,7 @@ A CLI tool to manage multiple Claude Code profiles with seamless switching and f
   - ✅ Styled output (Lipgloss)
   - ✅ Profile info command with usage stats
   - ✅ Enhanced metadata (usageCount, template, customFlags)
-  - ✅ Implicit profile switching (`cdp work` instead of `cdp switch work`)
+  - ✅ Implicit profile switching (`hat work` instead of `hat switch work`)
 - ✅ **Phase 9:** Testing Strategy
   - ✅ Unit tests for config package (69.2% coverage)
   - ✅ Unit tests for UI package (100% coverage)
@@ -62,19 +62,19 @@ A CLI tool to manage multiple Claude Code profiles with seamless switching and f
   - ✅ Template system (restrictive, permissive, custom)
   - ✅ Template loading and application
   - ✅ Embedded templates with go:embed
-  - ✅ `cdp create --template` flag
-  - ✅ `cdp templates` command to list available templates
+  - ✅ `hat create --template` flag
+  - ✅ `hat templates` command to list available templates
 - ✅ **Phase 6:** Shell Integration
   - ✅ Shell alias management (bash, zsh, fish)
-  - ✅ `cdp alias install/uninstall/list` commands (auto-generation)
+  - ✅ `hat alias install/uninstall/list` commands (auto-generation)
   - ✅ Auto-detection of shell type
   - ✅ RC file management with block markers
-  - ✅ Auto-completion (`cdp completion bash/zsh/fish/powershell`)
+  - ✅ Auto-completion (`hat completion bash/zsh/fish/powershell`)
 - ✅ **Phase 7:** Advanced Features
-  - ✅ Profile cloning (`cdp clone <source> <dest>`)
-  - ✅ Profile renaming (`cdp rename <old> <new>`)
-  - ✅ Profile diff (`cdp diff <profile1> <profile2>`)
-  - ✅ Backup and restore (`cdp backup create/list/restore/delete`)
+  - ✅ Profile cloning (`hat clone <source> <dest>`)
+  - ✅ Profile renaming (`hat rename <old> <new>`)
+  - ✅ Profile diff (`hat diff <profile1> <profile2>`)
+  - ✅ Backup and restore (`hat backup create/list/restore/delete`)
 - ✅ **Phase 10:** Documentation
   - ✅ Comprehensive README with all commands and examples
   - ✅ Tier 1, 2, and 3 features documented
@@ -91,7 +91,7 @@ A CLI tool to manage multiple Claude Code profiles with seamless switching and f
   - ✅ Real-time validation (format, reserved commands, duplicates)
   - ✅ Smart suggestion algorithm avoiding shell conflicts
   - ✅ Full text editing support (Ctrl+U, backspace, arrow keys)
-  - ✅ `cdp alias install` interactive wizard (replaces auto-generation)
+  - ✅ `hat alias install` interactive wizard (replaces auto-generation)
   - ✅ Added `charmbracelet/bubbles` v0.21.0 for TUI components
   - ✅ 31 unit tests covering validation logic
 
@@ -100,9 +100,9 @@ A CLI tool to manage multiple Claude Code profiles with seamless switching and f
 ## Architecture Overview
 
 ```
-cdp/
+hat/
 ├── cmd/
-│   └── cdp/
+│   └── hat/
 │       └── main.go              # Entry point
 ├── internal/
 │   ├── config/
@@ -138,7 +138,7 @@ cdp/
 ### 1.1 Project Setup ✅
 
 **Tasks:**
-- [x] Initialize Go module: `github.com/tiagokriok/cdp`
+- [x] Initialize Go module: `github.com/tiagokriok/hat`
 - [x] Create directory structure
 - [x] Setup `.gitignore`
 - [x] Create initial `Makefile`
@@ -157,7 +157,7 @@ github.com/charmbracelet/lipgloss   // Terminal styling (Tier 2)
 
 ### 1.2 Global Configuration System ✅ (Simplified for MVP)
 
-**File:** `~/.cdp/config.yaml`
+**File:** `~/.hat/config.yaml`
 
 **MVP Implementation (v0.1.0):**
 ```yaml
@@ -216,7 +216,7 @@ backup:
   enabled: true
   retention_days: 30
   auto_backup_on_delete: true
-  path: "~/.cdp/backups"
+  path: "~/.hat/backups"
 
 # Integration settings
 integration:
@@ -279,7 +279,7 @@ Each profile is stored in `~/.claude-profiles/<name>/`:
 ├── work/
 │   ├── .claude.json         # Claude Code config (OAuth, org, etc)
 │   ├── settings.json        # Claude settings (permissions, env, etc)
-│   └── .metadata.json       # cdp metadata (JSON format for MVP)
+│   └── .metadata.json       # hat metadata (JSON format for MVP)
 └── personal/
     ├── .claude.json
     ├── settings.json
@@ -358,7 +358,7 @@ func (p *Profile) Restore(backupPath string) error
 
 ### 2.3 Profile Templates ⏳ (Deferred to Tier 3)
 
-**Templates:** Will be stored in `templates/` and `~/.cdp/templates/`
+**Templates:** Will be stored in `templates/` and `~/.hat/templates/`
 
 ```json
 // templates/restrictive.json
@@ -421,12 +421,12 @@ func ApplyTemplate(profilePath, templateName string) error
 
 **Root command:**
 ```bash
-cdp [CDP_FLAGS] [PROFILE] [CLAUDE_FLAGS]
+hat [HAT_FLAGS] [PROFILE] [CLAUDE_FLAGS]
 ```
 
 ### 3.2 Flag Categories
 
-**CDP Flags (consumed by cdp):**
+**hat Flags (consumed by hat):**
 ```go
 const (
     // Profile shortcuts
@@ -471,10 +471,10 @@ const (
 package cli
 
 type ParsedArgs struct {
-    // CDP-specific
+    // hat-specific
     Command      string   // create, list, delete, etc.
     ProfileName  string   // Profile to switch to
-    CdpFlags     FlagSet  // Flags for cdp
+    HatFlags     FlagSet  // Flags for hat
     
     // Claude Code passthrough
     ClaudeFlags  []string // Flags to pass to Claude Code
@@ -500,7 +500,7 @@ type FlagSet struct {
 func Parse(args []string) (*ParsedArgs, error) {
     // Parse logic:
     // 1. Look for "--" separator
-    // 2. Identify CDP flags vs Claude flags
+    // 2. Identify hat flags vs Claude flags
     // 3. Extract profile name
     // 4. Build ParsedArgs struct
 }
@@ -512,21 +512,21 @@ func (p *ParsedArgs) GetClaudeCommand() []string
 **Parsing Algorithm:**
 
 ```
-Input: ["cdp", "-w", "--continue", "--verbose"]
+Input: ["hat", "-w", "--continue", "--verbose"]
 
 Step 1: Identify separator "--"
   - Not found, continue
 
 Step 2: Iterate through args
-  - "-w" → CDP flag (profile shortcut)
-  - "--continue" → Unknown to CDP → Claude flag
+  - "-w" → hat flag (profile shortcut)
+  - "--continue" → Unknown to hat → Claude flag
   - "--verbose" → Could be both, context matters
     - After profile selection → Claude flag
 
 Step 3: Build ParsedArgs
   ParsedArgs {
     ProfileName: "trabalho"  (from -w)
-    CdpFlags: { Work: true }
+    HatFlags: { Work: true }
     ClaudeFlags: ["--continue", "--verbose"]
     NoRun: false
   }
@@ -645,7 +645,7 @@ func (e *Executor) buildCommand(profile *config.Profile, flags []string) *exec.C
 
 func (e *Executor) setEnvironment(profile *config.Profile) error {
     // Set CLAUDE_CONFIG_DIR
-    // Set CLAUDE_PROFILE (for detection)
+    // Set HAT_PROFILE (for detection)
 }
 ```
 
@@ -704,12 +704,12 @@ func (am *AliasManager) InstallAll(profiles []config.Profile) error
 
 ```bash
 # ~/.zshrc or ~/.bashrc
-# Auto-generated by cdp - DO NOT EDIT THIS BLOCK
-# cdp-aliases-start
-alias cw='cdp -w'
-alias cp='cdp -p'
-alias cf='cdp freelance'
-# cdp-aliases-end
+# Auto-generated by hat - DO NOT EDIT THIS BLOCK
+# hat-aliases-start
+alias cw='hat -w'
+alias cp='hat -p'
+alias cf='hat freelance'
+# hat-aliases-end
 ```
 
 ### 6.2 Shell Initialization
@@ -721,7 +721,7 @@ Option to add to shell RC for default profile:
 # Set default Claude profile
 if [ -z "$CLAUDE_CONFIG_DIR" ]; then
   export CLAUDE_CONFIG_DIR=~/.claude-profiles/trabalho
-  export CLAUDE_PROFILE=trabalho
+  export HAT_PROFILE=trabalho
 fi
 ```
 
@@ -787,7 +787,7 @@ func DiffProfiles(profile1, profile2 string) error {
 ```go
 func BackupProfile(name string) error {
     // Create tar.gz of profile directory
-    // Store in ~/.cdp/backups/
+    // Store in ~/.hat/backups/
     // Filename: <profile>-<timestamp>.tar.gz
     // Auto-cleanup old backups based on retention policy
 }
@@ -904,17 +904,17 @@ tests/integration/
 #!/bin/bash
 
 # Setup
-cdp init
+hat init
 
 # Create profile
-cdp -n test-profile
+hat -n test-profile
 
 # Switch and verify
-cdp test-profile --no-run
+hat test-profile --no-run
 [ "$CLAUDE_CONFIG_DIR" = "$HOME/.claude-profiles/test-profile" ]
 
 # Cleanup
-cdp -d test-profile
+hat -d test-profile
 ```
 
 ---
@@ -935,7 +935,7 @@ Structure:
 ### 10.2 Man Page
 
 ```bash
-man cdp
+man hat
 ```
 
 ### 10.3 Examples & Tutorials
@@ -1035,20 +1035,20 @@ docs/
 
 2. **CLI Interface**
    - Cobra CLI framework with subcommands
-   - Interactive TUI menu (Bubble Tea) - run `cdp` with no args
+   - Interactive TUI menu (Bubble Tea) - run `hat` with no args
    - Styled terminal output (Lipgloss)
-   - Implicit profile switching (`cdp work` instead of `cdp switch work`)
+   - Implicit profile switching (`hat work` instead of `hat switch work`)
    - All core commands: init, create, list, delete, current, info, switch, help, version
    - Flag passthrough to Claude Code
    - --no-run flag for switching without execution
 
 3. **Claude Integration**
    - Execute Claude Code with correct profile environment
-   - Environment variable setting (CLAUDE_CONFIG_DIR, CLAUDE_PROFILE)
+   - Environment variable setting (CLAUDE_CONFIG_DIR, HAT_PROFILE)
    - Claude executable auto-detection
 
 4. **Configuration**
-   - Global config at ~/.cdp/config.yaml
+   - Global config at ~/.hat/config.yaml
    - Profile storage at ~/.claude-profiles/
    - Current profile tracking
 
@@ -1059,13 +1059,13 @@ docs/
    - Code quality (gofmt, go vet)
 
 ### ✅ Tier 3 Complete (Advanced Features v1.0.0)
-1. ✅ Profile templates (`cdp create --template restrictive/permissive`)
-2. ✅ Shell integration (`cdp alias install/uninstall/list`)
-3. ✅ Profile cloning (`cdp clone <source> <dest>`)
-4. ✅ Profile renaming (`cdp rename <old> <new>`)
-5. ✅ Profile diff (`cdp diff <profile1> <profile2>`)
-6. ✅ Backup and restore (`cdp backup create/list/restore/delete`)
-7. ✅ Auto-completion (`cdp completion bash/zsh/fish/powershell`)
+1. ✅ Profile templates (`hat create --template restrictive/permissive`)
+2. ✅ Shell integration (`hat alias install/uninstall/list`)
+3. ✅ Profile cloning (`hat clone <source> <dest>`)
+4. ✅ Profile renaming (`hat rename <old> <new>`)
+5. ✅ Profile diff (`hat diff <profile1> <profile2>`)
+6. ✅ Backup and restore (`hat backup create/list/restore/delete`)
+7. ✅ Auto-completion (`hat completion bash/zsh/fish/powershell`)
 8. ✅ Test coverage (now ~70%+, goal: 80%+)
 
 ### ✅ v1.1.0 Complete (Interactive Alias Management)
@@ -1097,40 +1097,40 @@ docs/
 
 ## 🎯 Getting Started
 
-To use CDP v1.1.0:
+To use hat v1.1.0:
 
 ```bash
 # Install
 make install
-# Or: go install github.com/tiagokriok/cdp/cmd/cdp@v1.1.0
+# Or: go install github.com/tiagokriok/hat/cmd/hat@v1.1.0
 
 # Initialize
-cdp init
+hat init
 
 # Create profiles
-cdp create work "Work profile"
-cdp create personal "Personal projects"
+hat create work "Work profile"
+hat create personal "Personal projects"
 
 # List profiles
-cdp list
+hat list
 
 # Interactive profile selector (TUI)
-cdp
+hat
 
 # Switch profiles
-cdp work --no-run
-cdp current
+hat work --no-run
+hat current
 
 # View profile details
-cdp info work
+hat info work
 
 # Interactive alias management (NEW in v1.1.0)
-cdp alias install      # TUI wizard to create/rename aliases
-cdp alias list         # List current aliases
-cdp alias uninstall    # Remove aliases
+hat alias install      # TUI wizard to create/rename aliases
+hat alias list         # List current aliases
+hat alias uninstall    # Remove aliases
 
 # Use with Claude
-cdp work --continue
+hat work --continue
 ```
 
 For more information, see README.md.

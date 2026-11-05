@@ -1,13 +1,13 @@
 .PHONY: build install test coverage clean dev help
 
-BINARY_NAME=cdp
+BINARY_NAME=hat
 INSTALL_PATH=$(HOME)/.local/bin
 GO=go
-VERSION?=0.1.0
+VERSION?=$(shell git describe --tags --always 2>/dev/null || echo dev)
 
 ## help: Display this help message
 help:
-	@echo "CDP - Claude Profile Switcher"
+	@echo "hat: Claude Code profile switcher"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make <target>"
@@ -17,7 +17,7 @@ help:
 
 ## build: Build the binary
 build:
-	$(GO) build -ldflags="-X main.Version=$(VERSION)" -o $(BINARY_NAME) cmd/cdp/main.go
+	$(GO) build -ldflags="-X main.Version=$(VERSION)" -o $(BINARY_NAME) cmd/hat/main.go
 
 ## install: Install the binary to ~/.local/bin
 install: build
@@ -41,7 +41,7 @@ clean:
 
 ## dev: Run the application in development mode
 dev:
-	$(GO) run cmd/cdp/main.go
+	$(GO) run cmd/hat/main.go
 
 ## fmt: Format Go code
 fmt:

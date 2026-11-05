@@ -3,6 +3,7 @@ package executor
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -35,12 +36,12 @@ func TestFindClaude_WithSetPath(t *testing.T) {
 	e.SetClaudePath(expectedPath)
 
 	// findClaude should return the set path
-	path, err := e.findClaude()
+	path, err := e.FindClaude()
 	if err != nil {
-		t.Fatalf("findClaude() error = %v, want nil", err)
+		t.Fatalf("FindClaude() error = %v, want nil", err)
 	}
 	if path != expectedPath {
-		t.Errorf("findClaude() = %q, want %q", path, expectedPath)
+		t.Errorf("FindClaude() = %q, want %q", path, expectedPath)
 	}
 }
 
@@ -64,12 +65,12 @@ func TestFindClaude_InPath(t *testing.T) {
 	os.Setenv("PATH", tmpDir+":"+originalPath)
 	defer os.Setenv("PATH", originalPath)
 
-	path, err := e.findClaude()
+	path, err := e.FindClaude()
 	if err != nil {
-		t.Fatalf("findClaude() error = %v, want nil", err)
+		t.Fatalf("FindClaude() error = %v, want nil", err)
 	}
 	if path != claudePath {
-		t.Errorf("findClaude() = %q, want %q", path, claudePath)
+		t.Errorf("FindClaude() = %q, want %q", path, claudePath)
 	}
 }
 
@@ -110,12 +111,12 @@ func TestFindClaude_CommonLocations(t *testing.T) {
 	os.Setenv("PATH", "")
 	defer os.Setenv("PATH", originalPath)
 
-	path, err := e.findClaude()
+	path, err := e.FindClaude()
 	if err != nil {
-		t.Fatalf("findClaude() error = %v, want nil", err)
+		t.Fatalf("FindClaude() error = %v, want nil", err)
 	}
 	if path != claudePath {
-		t.Errorf("findClaude() = %q, want %q", path, claudePath)
+		t.Errorf("FindClaude() = %q, want %q", path, claudePath)
 	}
 }
 
@@ -139,7 +140,7 @@ func TestFindClaude_NotFound(t *testing.T) {
 	os.Setenv("HOME", tmpHome)
 	defer os.Setenv("HOME", originalHome)
 
-	_, err := e.findClaude()
+	_, err := e.FindClaude()
 	if err == nil {
 		// It's possible claude is found through other means,
 		// so we just verify the function doesn't panic
@@ -160,5 +161,63 @@ func TestRun_WithInvalidClaude(t *testing.T) {
 	err := e.Run(profilePath, []string{})
 	if err == nil {
 		t.Error("Run() should fail when claude binary doesn't exist")
+	}
+}
+
+func TestBuildEnv(t *testing.T) {
+	base := []string{"PATH=/bin", "CLAUDE_CONFIG_DIR=/stale", "HAT_PROFILE=old"}
+	tests := []struct {
+		name      string
+		isDefault bool
+		want      []string
+		notWant   string
+	}{
+		{"custom profile sets config dir", false, []string{"PATH=/bin", "CLAUDE_CONFIG_DIR=/p/work", "HAT_PROFILE=work"}, "/stale"},
+		{"default profile omits config dir", true, []string{"PATH=/bin", "HAT_PROFILE=work"}, "CLAUDE_CONFIG_DIR"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := BuildEnv(base, "/p/work", tt.isDefault)
+			if len(got) != len(tt.want) {
+				t.Fatalf("BuildEnv() = %v, want %v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("BuildEnv()[%d] = %q, want %q", i, got[i], tt.want[i])
+				}
+			}
+			for _, kv := range got {
+				if strings.Contains(kv, tt.notWant) {
+					t.Errorf("env contains %q: %v", tt.notWant, got)
+				}
+			}
+		})
+	}
+}
+
+func TestAuthEnvOverrides(t *testing.T) {
+	tests := []struct {
+		name string
+		env  []string
+		want []string
+	}{
+		{"none", []string{"PATH=/bin"}, nil},
+		{"empty value ignored", []string{"ANTHROPIC_API_KEY="}, nil},
+		{"one set", []string{"PATH=/bin", "ANTHROPIC_API_KEY=sk-secret"}, []string{"ANTHROPIC_API_KEY"}},
+		{"all set", []string{"CLAUDE_CODE_OAUTH_TOKEN=x", "ANTHROPIC_AUTH_TOKEN=y", "ANTHROPIC_API_KEY=z"}, []string{"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"}},
+		{"prefix lookalike ignored", []string{"ANTHROPIC_API_KEY_OTHER=1"}, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := AuthEnvOverrides(tt.env)
+			if len(got) != len(tt.want) {
+				t.Fatalf("AuthEnvOverrides() = %v, want %v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("got %v, want %v", got, tt.want)
+				}
+			}
+		})
 	}
 }

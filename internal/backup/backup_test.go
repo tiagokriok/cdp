@@ -29,7 +29,7 @@ func TestNewBackupManager(t *testing.T) {
 		t.Errorf("profilesDir = %s, want %s", bm.profilesDir, profilesDir)
 	}
 
-	expectedBackupDir := filepath.Join(tmpDir, ".cdp", "backups")
+	expectedBackupDir := filepath.Join(tmpDir, ".hat", "backups")
 	if bm.backupDir != expectedBackupDir {
 		t.Errorf("backupDir = %s, want %s", bm.backupDir, expectedBackupDir)
 	}
@@ -417,7 +417,7 @@ func TestGetBackupDir(t *testing.T) {
 		t.Fatalf("NewBackupManager failed: %v", err)
 	}
 
-	expected := filepath.Join(tmpDir, ".cdp", "backups")
+	expected := filepath.Join(tmpDir, ".hat", "backups")
 	if bm.GetBackupDir() != expected {
 		t.Errorf("GetBackupDir() = %s, want %s", bm.GetBackupDir(), expected)
 	}

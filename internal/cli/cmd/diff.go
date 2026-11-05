@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/config"
-	"github.com/tiagokriok/cdp/internal/ui"
+	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/ui"
 )
 
 // diffCmd represents the diff command
@@ -23,7 +23,7 @@ var diffCmd = &cobra.Command{
 Compares settings.json files and metadata between the two profiles.
 
 Example:
-  cdp diff work personal`,
+  hat diff work personal`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		profile1 := args[0]
@@ -31,7 +31,7 @@ Example:
 
 		cfg, err := config.Load()
 		if err != nil {
-			return fmt.Errorf("CDP not initialized. Run 'cdp init' first")
+			return fmt.Errorf("hat not initialized. Run 'hat init' first")
 		}
 
 		pm := config.NewProfileManager(cfg)

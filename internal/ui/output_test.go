@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tiagokriok/cdp/internal/config"
+	"github.com/tiagokriok/hat/internal/config"
 )
 
 // captureOutput captures stdout during a function execution
@@ -266,5 +266,21 @@ func TestFormatTime(t *testing.T) {
 				t.Errorf("formatTime() = %q, want %q", result, tt.contains)
 			}
 		})
+	}
+}
+
+func TestPrintProfile_ZeroTimestampsHidden(t *testing.T) {
+	p := config.Profile{Name: "default", Path: "/tmp/default"}
+
+	list := captureOutput(func() { PrintProfileList([]config.Profile{p}, "") })
+	info := captureOutput(func() { PrintProfileInfo(&p, false) })
+
+	for name, out := range map[string]string{"list": list, "info": info} {
+		if strings.Contains(out, "Created") {
+			t.Errorf("%s output should omit Created for zero time: %q", name, out)
+		}
+		if strings.Contains(out, "years ago") || strings.Contains(out, "0001") {
+			t.Errorf("%s output leaks zero time: %q", name, out)
+		}
 	}
 }

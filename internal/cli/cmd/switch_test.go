@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/cli"
-	"github.com/tiagokriok/cdp/internal/cli/cmd"
-	"github.com/tiagokriok/cdp/internal/config"
+	"github.com/tiagokriok/hat/internal/cli"
+	"github.com/tiagokriok/hat/internal/cli/cmd"
+	"github.com/tiagokriok/hat/internal/config"
 )
 
 func TestSwitchCmd(t *testing.T) {

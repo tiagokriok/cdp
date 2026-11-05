@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/backup"
-	"github.com/tiagokriok/cdp/internal/config"
-	"github.com/tiagokriok/cdp/internal/ui"
+	"github.com/tiagokriok/hat/internal/backup"
+	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/ui"
 )
 
 var overwriteFlag bool
@@ -18,10 +18,10 @@ var backupCmd = &cobra.Command{
 	Long: `Manage profile backups.
 
 Commands:
-  cdp backup <profile>       - Create a backup of a profile
-  cdp backup list            - List all backups
-  cdp backup restore <file>  - Restore a profile from backup
-  cdp backup delete <file>   - Delete a backup file`,
+  hat backup <profile>       - Create a backup of a profile
+  hat backup list            - List all backups
+  hat backup restore <file>  - Restore a profile from backup
+  hat backup delete <file>   - Delete a backup file`,
 }
 
 // backupCreateCmd creates a backup
@@ -34,7 +34,7 @@ var backupCreateCmd = &cobra.Command{
 
 		cfg, err := config.Load()
 		if err != nil {
-			return fmt.Errorf("CDP not initialized. Run 'cdp init' first")
+			return fmt.Errorf("hat not initialized. Run 'hat init' first")
 		}
 
 		bm, err := backup.NewBackupManager(cfg.GetProfilesDir())
@@ -59,7 +59,7 @@ var backupListCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			return fmt.Errorf("CDP not initialized. Run 'cdp init' first")
+			return fmt.Errorf("hat not initialized. Run 'hat init' first")
 		}
 
 		bm, err := backup.NewBackupManager(cfg.GetProfilesDir())
@@ -75,7 +75,7 @@ var backupListCmd = &cobra.Command{
 		if len(backups) == 0 {
 			ui.Info("No backups found.")
 			fmt.Println("\nCreate a backup with:")
-			fmt.Println("  cdp backup create <profile>")
+			fmt.Println("  hat backup create <profile>")
 			return nil
 		}
 
@@ -111,7 +111,7 @@ Use --overwrite to replace an existing profile with the same name.`,
 
 		cfg, err := config.Load()
 		if err != nil {
-			return fmt.Errorf("CDP not initialized. Run 'cdp init' first")
+			return fmt.Errorf("hat not initialized. Run 'hat init' first")
 		}
 
 		bm, err := backup.NewBackupManager(cfg.GetProfilesDir())
@@ -144,7 +144,7 @@ var backupDeleteCmd = &cobra.Command{
 
 		cfg, err := config.Load()
 		if err != nil {
-			return fmt.Errorf("CDP not initialized. Run 'cdp init' first")
+			return fmt.Errorf("hat not initialized. Run 'hat init' first")
 		}
 
 		bm, err := backup.NewBackupManager(cfg.GetProfilesDir())

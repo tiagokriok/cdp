@@ -1,19 +1,25 @@
-# CDP - Claude Profile Switcher
+# hat: Claude Code profile switcher
 
 A fast, lightweight CLI tool for managing multiple [Claude Code](https://claude.ai/code) profiles with seamless switching.
 
-## Why CDP?
+## Why hat?
 
-CDP solves the problem of managing different Claude Code configurations for work, personal projects, or multiple organizations. Switch between profiles instantly without manual configuration management.
+hat solves the problem of managing different Claude Code configurations for work, personal projects, or multiple organizations. Switch between profiles instantly without manual configuration management.
 
 ## Features
 
 - **Profile Management** - Create, list, delete, clone, rename, and compare profiles
-- **Implicit Switching** - `cdp work` switches and launches Claude in one step
-- **Interactive TUI** - Visual profile selector with arrow key / vim navigation
+- **Implicit Switching** - `hat work` switches and launches Claude in one step
+- **Interactive TUI** - Visual profile selector with arrow key / vim navigation. Selecting a profile launches Claude (`hat --no-run` only switches)
 - **Interactive Alias Wizard** - Guided TUI for setting up shell aliases with smart suggestions
 - **Templates** - Pre-configured settings (restrictive / permissive) applied on creation
-- **Import Existing Config** - Migrate your existing Claude Code configuration into CDP
+- **Import Existing Config** - Migrate your existing Claude Code configuration, including skills, agents, commands and plugins, into hat
+- **Default Profile** - A profile symlinked to `~/.claude` runs Claude without `CLAUDE_CONFIG_DIR`, so it keeps using `~/.claude.json`
+- **Shared Layer** - Share skills, agents, commands, output styles, rules and `CLAUDE.md` across profiles via symlinks
+- **Plugins per Profile** - List, enable, disable, copy and diff plugins per profile
+- **Directory Rules** - Bare `hat` in a mapped directory launches that profile
+- **Doctor & MCP** - `hat doctor` health checks, read-only `hat mcp` listing
+- **Custom Flags** - `customFlags` in a profile's `.metadata.json` are passed to Claude before your own flags
 - **Backup & Restore** - Full profile backup with tar.gz compression
 - **Shell Aliases** - Quick profile switching via custom shell aliases (bash/zsh/fish)
 - **Shell Completion** - Auto-completion for bash, zsh, fish, and PowerShell
@@ -24,84 +30,101 @@ CDP solves the problem of managing different Claude Code configurations for work
 ### Using `go install`
 
 ```bash
-go install github.com/tiagokriok/cdp/cmd/cdp@latest
+go install github.com/tiagokriok/hat/cmd/hat@latest
 ```
 
-This installs `cdp` to `$GOPATH/bin/` (typically `~/go/bin/`). Make sure `$GOPATH/bin` is in your PATH.
+This installs `hat` to `$GOPATH/bin/` (typically `~/go/bin/`). Make sure `$GOPATH/bin` is in your PATH.
 
 ### From Source
 
 ```bash
-git clone https://github.com/tiagokriok/cdp.git
-cd cdp
+git clone https://github.com/tiagokriok/hat.git
+cd hat
 make install
 ```
 
-Installs to `~/.local/bin/cdp`.
+Installs to `~/.local/bin/hat`.
+
+## Migrating from cdp
+
+- `~/.cdp` moves to `~/.hat` automatically on the first `hat` run. Profiles are not touched.
+- Old `# cdp-aliases` blocks are still listed and are replaced by `hat` ones on the next `hat alias install` (`hat alias uninstall` removes them).
+- Run `make install` and delete the old binary: `rm ~/.local/bin/cdp`.
+- The env var passed to Claude is now `HAT_PROFILE` (was `CLAUDE_PROFILE`).
 
 ## Quick Start
 
 ```bash
-# Initialize CDP
-cdp init
+# Initialize hat
+hat init
 
 # Create profiles
-cdp create work "Work profile"
-cdp create personal "Personal projects"
+hat create work "Work profile"
+hat create personal "Personal projects"
 
 # Create with a template
-cdp create secure --template restrictive
+hat create secure --template restrictive
 
 # Import existing Claude configuration
-cdp create imported --import-from ~/.config/claude-code -d "Imported config"
+hat create imported --import-from ~/.config/claude-code -d "Imported config"
 
 # Switch to a profile and run Claude
-cdp work --continue
+hat work --continue
 
 # Switch without running Claude
-cdp work --no-run
+hat work --no-run
 
-# Interactive profile selector (no arguments)
-cdp
+# Interactive profile selector (no arguments), launches Claude on select
+hat
 
 # Clone, rename, compare
-cdp clone work work-copy
-cdp rename work-copy work-v2
-cdp diff work personal
+hat clone work work-copy
+hat rename work-copy work-v2
+hat diff work personal
 
 # Backup and restore
-cdp backup create work
-cdp backup restore work-20260115-143022.tar.gz
+hat backup create work
+hat backup restore work-20260115-143022.tar.gz
 
 # Set up shell aliases interactively
-cdp alias install
+hat alias install
 ```
 
 ## Command Reference
 
 | Command | Description |
 |---|---|
-| `cdp init` | Initialize config and profiles directories |
-| `cdp create <name> [desc]` | Create a new profile |
-| `cdp list` / `cdp ls` | List all profiles |
-| `cdp delete <name>` / `cdp rm <name>` | Delete a profile (with confirmation) |
-| `cdp current` | Show currently active profile |
-| `cdp info [name]` | Show profile details (defaults to current) |
-| `cdp <profile> [flags...]` | Switch to profile and run Claude |
-| `cdp clone <src> <dst>` | Clone a profile |
-| `cdp rename <old> <new>` | Rename a profile |
-| `cdp diff <p1> <p2>` | Compare two profiles |
-| `cdp templates list` | List available templates |
-| `cdp templates show <name>` | Show template contents |
-| `cdp alias install` | Interactive alias setup wizard |
-| `cdp alias uninstall` | Remove all CDP aliases |
-| `cdp alias list` | List installed aliases |
-| `cdp backup create <profile>` | Create tar.gz backup |
-| `cdp backup list` | List backups |
-| `cdp backup restore <file>` | Restore from backup (`--overwrite` flag) |
-| `cdp backup delete <file>` | Delete a backup |
-| `cdp completion <shell>` | Generate shell completions (bash/zsh/fish/powershell) |
-| `cdp version` / `cdp -v` | Show version |
+| `hat init` | Initialize config and profiles directories |
+| `hat create <name> [desc]` | Create a new profile |
+| `hat list` / `hat ls` | List all profiles |
+| `hat delete <name>` / `hat rm <name>` | Delete a profile (with confirmation) |
+| `hat current` | Show currently active profile |
+| `hat info [name]` | Show profile details (defaults to current) |
+| `hat <profile> [flags...]` | Switch to profile and run Claude |
+| `hat clone <src> <dst>` | Clone a profile |
+| `hat rename <old> <new>` | Rename a profile |
+| `hat diff <p1> <p2>` | Compare two profiles |
+| `hat templates list` | List available templates |
+| `hat templates show <name>` | Show template contents |
+| `hat alias install` | Interactive alias setup wizard |
+| `hat alias uninstall` | Remove all hat aliases |
+| `hat alias list` | List installed aliases |
+| `hat backup create <profile>` | Create tar.gz backup |
+| `hat backup list` | List backups |
+| `hat backup restore <file>` | Restore from backup (`--overwrite` flag) |
+| `hat backup delete <file>` | Delete a backup |
+| `hat shared add <kind> <path>` | Move a file/dir into `~/.hat/shared`, leave a symlink (y/N prompt) |
+| `hat shared link <profile> <kinds...>` / `unlink` | Opt a profile in/out of shared kinds |
+| `hat shared sync [profile]` / `list` | Re-link shared entries / show shared content |
+| `hat plugins [profile]` | List plugins of a profile |
+| `hat plugins enable\|disable <profile> <plugin@marketplace>` | Toggle a plugin |
+| `hat plugins copy <from> <to> <plugin@marketplace>` | Copy a plugin and its marketplace to another profile |
+| `hat plugins diff <a> <b>` | Compare plugins of two profiles |
+| `hat rule add <path\|.> <profile>` / `list` / `rm <path>` | Manage directory rules |
+| `hat doctor` | Health checks, exit 1 on failure |
+| `hat mcp [profile] [--all]` / `hat mcp diff <a> <b>` | List/compare MCP servers (read-only) |
+| `hat completion <shell>` | Generate shell completions (bash/zsh/fish/powershell) |
+| `hat version` / `hat -v` | Show version |
 
 ### Key Flags
 
@@ -109,11 +132,32 @@ cdp alias install
 |---|---|---|
 | `--no-run`, `-nr` | `switch` / implicit | Switch profile without launching Claude |
 | `--template`, `-t` | `create` | Apply template (restrictive/permissive) |
-| `--import-from` | `create` | Import existing Claude config directory |
+| `--import-from` | `create` | Import existing Claude config directory (copies subdirectories, excludes runtime/cache/history such as `projects`, `todos`, `cache`, `history.jsonl`; symlinks skipped) |
 | `--description`, `-d` | `create` | Profile description |
 | `--overwrite` | `backup restore` | Overwrite existing profile on restore |
 
 All other flags are passed through to Claude Code (e.g. `--continue`, `--verbose`, `--model`).
+
+### Notes
+
+- `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and `CLAUDE_CODE_OAUTH_TOKEN` in your environment override the profile's login. hat warns (names only) when any is set.
+- To use your existing `~/.claude` as a profile (the default profile): `ln -s ~/.claude ~/.claude-profiles/work`. It is valid as long as the directory exists. A missing `.metadata.json` is treated as empty and created on first write (e.g. a switch). Claude itself keeps using `~/.claude.json`. Other profiles still require `.metadata.json`, `.claude.json` and `settings.json`.
+
+### Shared layer
+
+`hat shared add <kind> <path>` moves the path into `~/.hat/shared` and leaves a symlink (asks y/N). Kinds: `skills`, `agents`, `commands`, `output-styles`, `rules`, `CLAUDE.md`. `hat shared link <profile> <kinds...>` opts a profile in, `unlink` opts out, `list` shows content. Links are per entry, and a profile's own entry wins. `sync [profile]` prunes dangling links into shared, and also runs on every launch. Opt-in per profile.
+
+### Plugins per profile
+
+Plugins are scoped per profile, not symlinked. `hat plugins [profile]` lists, `enable|disable <profile> <plugin@marketplace>` toggles, `copy <from> <to> <plugin@marketplace>` copies the marketplace into `extraKnownMarketplaces` and enables it (installed on next launch), `diff <a> <b>` compares. Mods are plugins and follow the same scoping.
+
+### Directory rules
+
+`hat rule add <path|.> <profile>` maps a directory to a profile, `list` shows rules (`▶` marks the match for the current directory), `rm <path>` removes one. Bare `hat` in a mapped directory launches that profile (longest path wins), otherwise the TUI opens. `--no-run` is honored. Rules live under `rules:` in `~/.hat/config.yaml`.
+
+### Doctor and MCP
+
+`hat doctor` checks the claude binary/version, each profile (structure, `claude auth status` with a 15s timeout, broken symlinks), auth env overrides, a stale `~/.claude/.claude.json`, and rules pointing to missing profiles or paths. Exits 1 on any failure. `hat mcp [profile] [--all]` and `hat mcp diff <a> <b>` are read-only and show name, type and `scheme://host` or command, never secrets.
 
 ## Architecture
 
@@ -121,10 +165,10 @@ All other flags are passed through to Claude Code (e.g. `--continue`, `--verbose
 User → main.go (pre-parser) → Cobra CLI → Command Handler → ProfileManager / Executor → File System
 ```
 
-- **Entry point** (`cmd/cdp/main.go`): Pre-parses args to handle implicit switching (`cdp work` becomes `cdp switch work`)
+- **Entry point** (`cmd/hat/main.go`): Pre-parses args to handle implicit switching (`hat work` becomes `hat switch work`)
 - **CLI layer** (`internal/cli/`): Cobra commands, business logic handlers, Bubble Tea TUI
 - **Config layer** (`internal/config/`): Global config, profile CRUD, embedded templates
-- **Executor** (`internal/executor/`): Finds Claude binary, sets `CLAUDE_CONFIG_DIR`, execs
+- **Executor** (`internal/executor/`): Finds Claude binary, sets `CLAUDE_CONFIG_DIR` (except for the default `~/.claude` profile), execs
 - **UI** (`internal/ui/`): Styled terminal output with lipgloss
 - **Aliases** (`pkg/aliases/`): Shell alias management (bash/zsh/fish)
 - **Backup** (`internal/backup/`): tar.gz backup/restore
@@ -132,16 +176,22 @@ User → main.go (pre-parser) → Cobra CLI → Command Handler → ProfileManag
 ### Directory Layout
 
 ```
-cmd/cdp/main.go          # Entry point
+cmd/hat/main.go          # Entry point
 internal/
   cli/
     cmd/                  # Cobra subcommand definitions
     commands.go           # Command handler logic
+    doctor.go, mcp.go, rules.go  # doctor, mcp, rule handlers
     interactive.go        # TUI profile selector
     interactive_alias.go  # TUI alias wizard
   config/
-    config.go             # Global config (~/.cdp/config.yaml)
+    config.go             # Global config (~/.hat/config.yaml)
     profile.go            # Profile operations
+    copy.go               # Import/clone copier and exclusion list
+    shared.go             # Shared layer (~/.hat/shared)
+    plugins.go            # Per-profile plugins
+    rules.go              # Directory rules
+    claudejson.go         # Claude state file path
     templates.go          # Template system (embedded JSON)
     templates/            # Built-in template files
   executor/claude.go      # Claude Code execution
@@ -153,7 +203,7 @@ scripts/e2e_test.sh       # E2E test suite
 
 ### Configuration
 
-**Global config** (`~/.cdp/config.yaml`):
+**Global config** (`~/.hat/config.yaml`):
 
 ```yaml
 version: "1.0"
@@ -174,7 +224,7 @@ currentProfile: work
 }
 ```
 
-Each profile directory also contains `.claude.json` (OAuth) and `settings.json` (Claude settings), both managed by Claude Code itself.
+Each profile directory also contains `.claude.json` and `settings.json`, managed by Claude Code. hat writes `settings.json` only when applying a template.
 
 ## Dependencies
 
@@ -202,7 +252,7 @@ make test               # Run unit tests
 make coverage           # HTML coverage report
 make lint               # Format + vet
 make dev                # Run without building
-bash scripts/e2e_test.sh  # Run E2E tests
+bash scripts/e2e_test.sh  # Run E2E tests (48 checks)
 ```
 
 ## Roadmap
@@ -214,6 +264,7 @@ See [PLAN.md](PLAN.md) for the full implementation roadmap.
 - **v1.0.0** - Advanced features: templates, aliases, clone, rename, diff, backup, completions
 - **v1.1.0** - Interactive alias wizard with TUI
 - **v1.1.1** - Bug fix: Claude flag passthrough
+- **Unreleased** - Default `~/.claude` profile, subdirectory import/clone, TUI launches Claude, customFlags, auth env warning
 
 ## Contributing
 

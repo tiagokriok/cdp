@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/cli" // Import internal/cli to access HandleDelete
-	"github.com/tiagokriok/cdp/internal/config"
+	"github.com/tiagokriok/hat/internal/cli" // Import internal/cli to access HandleDelete
+	"github.com/tiagokriok/hat/internal/config"
 )
 
 func TestDeleteCmd(t *testing.T) {

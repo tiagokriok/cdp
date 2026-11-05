@@ -14,7 +14,7 @@ TESTS_PASSED=0
 # Clean up function
 cleanup() {
     echo -e "\n${YELLOW}Cleaning up test environment...${NC}"
-    rm -rf ~/.cdp-test ~/.claude-profiles-test
+    rm -rf ~/.hat-test ~/.claude-profiles-test
     unset HOME
 }
 
@@ -46,15 +46,15 @@ setup_test_env() {
     export HOME="$TEST_HOME"
 
     # Override config locations
-    export CDP_CONFIG_DIR="$TEST_HOME/.cdp-test"
-    export CDP_PROFILES_DIR="$TEST_HOME/.claude-profiles-test"
+    export HAT_CONFIG_DIR="$TEST_HOME/.hat-test"
+    export HAT_PROFILES_DIR="$TEST_HOME/.claude-profiles-test"
 
     echo "Test HOME: $TEST_HOME"
 }
 
 # Build the binary
 build_binary() {
-    test_section "Building CDP binary"
+    test_section "Building hat binary"
 
     if make build; then
         pass "Binary built successfully"
@@ -68,14 +68,14 @@ build_binary() {
 test_init() {
     test_section "Testing init command"
 
-    if ./cdp init | grep -q "initialized successfully"; then
+    if ./hat init | grep -q "initialized successfully"; then
         pass "Init command executed"
     else
         fail "Init command failed"
         return 1
     fi
 
-    if [ -d "$HOME/.cdp" ]; then
+    if [ -d "$HOME/.hat" ]; then
         pass "Config directory created"
     else
         fail "Config directory not created"
@@ -87,7 +87,7 @@ test_init() {
         fail "Profiles directory not created"
     fi
 
-    if [ -f "$HOME/.cdp/config.yaml" ]; then
+    if [ -f "$HOME/.hat/config.yaml" ]; then
         pass "Config file created"
     else
         fail "Config file not created"
@@ -98,7 +98,7 @@ test_init() {
 test_create() {
     test_section "Testing create command"
 
-    if ./cdp create work "Work profile" | grep -q "created successfully"; then
+    if ./hat create work "Work profile" | grep -q "created successfully"; then
         pass "Create work profile"
     else
         fail "Failed to create work profile"
@@ -118,7 +118,7 @@ test_create() {
     fi
 
     # Create second profile
-    if ./cdp create personal "Personal projects" | grep -q "created successfully"; then
+    if ./hat create personal "Personal projects" | grep -q "created successfully"; then
         pass "Create personal profile"
     else
         fail "Failed to create personal profile"
@@ -129,7 +129,7 @@ test_create() {
 test_list() {
     test_section "Testing list command"
 
-    output=$(./cdp list)
+    output=$(./hat list)
 
     if echo "$output" | grep -q "work"; then
         pass "Work profile listed"
@@ -154,7 +154,7 @@ test_list() {
 test_switch() {
     test_section "Testing switch command"
 
-    if ./cdp work --no-run | grep -q "Switched to profile: work"; then
+    if ./hat work --no-run | grep -q "Switched to profile: work"; then
         pass "Switch to work profile"
     else
         fail "Failed to switch to work profile"
@@ -162,7 +162,7 @@ test_switch() {
     fi
 
     # Verify current profile
-    if ./cdp current | grep -q "Profile: work"; then
+    if ./hat current | grep -q "Profile: work"; then
         pass "Current profile is work"
     else
         fail "Current profile not set correctly"
@@ -173,7 +173,7 @@ test_switch() {
 test_current() {
     test_section "Testing current command"
 
-    output=$(./cdp current)
+    output=$(./hat current)
 
     if echo "$output" | grep -q "Profile: work"; then
         pass "Current command shows correct profile"
@@ -188,12 +188,112 @@ test_current() {
     fi
 }
 
+# Test rule command
+test_rule() {
+    test_section "Testing rule command"
+
+    RULE_DIR=$(mktemp -d)
+    HAT_BIN="$PWD/hat"
+
+    output=$(./hat rule add "$RULE_DIR" work 2>&1)
+    if echo "$output" | grep -q "Rule added"; then
+        pass "Rule add"
+    else
+        fail "Rule add failed"
+    fi
+
+    output=$(./hat rule add "$RULE_DIR" ghost 2>&1)
+    if echo "$output" | grep -q "does not exist"; then
+        pass "Rule add rejects unknown profile"
+    else
+        fail "Rule add accepted unknown profile"
+    fi
+
+    output=$(./hat rule list 2>&1)
+    if echo "$output" | grep -q "$RULE_DIR -> work"; then
+        pass "Rule list shows rule"
+    else
+        fail "Rule list missing rule"
+    fi
+
+    output=$(cd "$RULE_DIR" && "$HAT_BIN" rule list 2>&1)
+    if echo "$output" | grep -q "▶"; then
+        pass "Rule list marks matching rule"
+    else
+        fail "Rule list did not mark matching rule"
+    fi
+
+    output=$(cd "$RULE_DIR" && "$HAT_BIN" --no-run 2>&1)
+    if echo "$output" | grep -q "Using profile work"; then
+        pass "Bare hat uses rule"
+    else
+        fail "Bare hat ignored rule"
+    fi
+
+    output=$(./hat rule rm "$RULE_DIR" 2>&1)
+    if echo "$output" | grep -q "Rule removed"; then
+        pass "Rule rm"
+    else
+        fail "Rule rm failed"
+    fi
+
+    output=$(./hat rule list 2>&1)
+    if echo "$output" | grep -q "No rules"; then
+        pass "Rule list empty after rm"
+    else
+        fail "Rule list not empty after rm"
+    fi
+
+    rm -rf "$RULE_DIR"
+}
+
+test_shared_and_plugins() {
+    test_section "Testing shared layer and plugins"
+
+    mkdir -p "$HOME/.hat/shared/skills/demo"
+    echo "demo" > "$HOME/.hat/shared/skills/demo/SKILL.md"
+
+    ./hat shared link work skills > /dev/null 2>&1
+    if [ -L "$HOME/.claude-profiles/work/skills/demo" ]; then
+        pass "shared link creates symlink"
+    else
+        fail "shared link did not create symlink"
+    fi
+
+    rm -rf "$HOME/.hat/shared/skills/demo"
+    ./hat shared sync work > /dev/null 2>&1
+    if [ ! -e "$HOME/.claude-profiles/work/skills/demo" ] && [ ! -L "$HOME/.claude-profiles/work/skills/demo" ]; then
+        pass "shared sync prunes dangling symlink"
+    else
+        fail "shared sync left dangling symlink"
+    fi
+
+    ./hat shared unlink work skills > /dev/null 2>&1
+    if ! grep -q "\"shared\"" "$HOME/.claude-profiles/work/.metadata.json"; then
+        pass "shared unlink removes opt-in"
+    else
+        fail "shared unlink did not remove opt-in"
+    fi
+
+    if ./hat plugins enable work demo@market > /dev/null 2>&1 && ./hat plugins work | grep -q "demo@market  *yes"; then
+        pass "plugins enable"
+    else
+        fail "plugins enable failed"
+    fi
+
+    if ./hat plugins disable work demo@market > /dev/null 2>&1 && ./hat plugins work | grep -q "demo@market  *no"; then
+        pass "plugins disable"
+    else
+        fail "plugins disable failed"
+    fi
+}
+
 # Test delete command
 test_delete() {
     test_section "Testing delete command"
 
     # Try to delete current profile (should fail)
-    output=$(echo "y" | ./cdp delete work 2>&1)
+    output=$(echo "y" | ./hat delete work 2>&1)
     if echo "$output" | grep -qi "cannot delete.*current"; then
         pass "Cannot delete current profile"
     else
@@ -201,10 +301,10 @@ test_delete() {
     fi
 
     # Switch to different profile first
-    ./cdp personal --no-run > /dev/null 2>&1
+    ./hat personal --no-run > /dev/null 2>&1
 
     # Delete work profile
-    if echo "y" | ./cdp delete work 2>&1 | grep -q "deleted successfully"; then
+    if echo "y" | ./hat delete work 2>&1 | grep -q "deleted successfully"; then
         pass "Delete work profile"
     else
         fail "Failed to delete work profile"
@@ -221,13 +321,13 @@ test_delete() {
 test_help_version() {
     test_section "Testing help and version commands"
 
-    if ./cdp help | grep -q "Claude Profile Switcher"; then
+    if ./hat help | grep -q "Claude Code profile switcher"; then
         pass "Help command works"
     else
         fail "Help command failed"
     fi
 
-    if ./cdp version | grep -q "Version:"; then
+    if ./hat version | grep -q "Version:"; then
         pass "Version command works"
     else
         fail "Version command failed"
@@ -239,7 +339,7 @@ test_error_handling() {
     test_section "Testing error handling"
 
     # Try to create profile with invalid name
-    output1=$(./cdp create "invalid name" 2>&1)
+    output1=$(./hat create "invalid name" 2>&1)
     if echo "$output1" | grep -qi "invalid.*profile.*name"; then
         pass "Rejects invalid profile names"
     else
@@ -247,7 +347,7 @@ test_error_handling() {
     fi
 
     # Try to delete non-existent profile
-    output2=$(echo "y" | ./cdp delete nonexistent 2>&1)
+    output2=$(echo "y" | ./hat delete nonexistent 2>&1)
     if echo "$output2" | grep -qi "does not exist"; then
         pass "Handles non-existent profile deletion"
     else
@@ -255,7 +355,7 @@ test_error_handling() {
     fi
 
     # Try to switch to non-existent profile
-    output3=$(./cdp nonexistent --no-run 2>&1)
+    output3=$(./hat nonexistent --no-run 2>&1)
     if echo "$output3" | grep -qi "does not exist"; then
         pass "Handles non-existent profile switch"
     else
@@ -282,7 +382,7 @@ SCRIPT
     export PATH="$MOCK_DIR:$PATH"
 
     # Test 1: Single flag passthrough
-    output1=$(./cdp personal --continue 2>&1)
+    output1=$(./hat personal --continue 2>&1)
     if echo "$output1" | grep -q "CLAUDE_ARGS:.*--continue"; then
         pass "Single Claude flag passed through"
     else
@@ -291,7 +391,7 @@ SCRIPT
     fi
 
     # Test 2: Multiple flags passthrough
-    output2=$(./cdp personal --continue --verbose 2>&1)
+    output2=$(./hat personal --continue --verbose 2>&1)
     if echo "$output2" | grep -q "CLAUDE_ARGS:.*--continue" && echo "$output2" | grep -q "CLAUDE_ARGS:.*--verbose"; then
         pass "Multiple Claude flags passed through"
     else
@@ -308,7 +408,7 @@ SCRIPT
     fi
 
     # Test 4: Flags with values
-    output3=$(./cdp personal --model gpt-4 --temperature 0.5 2>&1)
+    output3=$(./hat personal --model gpt-4 --temperature 0.5 2>&1)
     if echo "$output3" | grep -q "CLAUDE_ARGS:.*--model.*gpt-4" && echo "$output3" | grep -q "CLAUDE_ARGS:.*--temperature.*0.5"; then
         pass "Flags with values passed through"
     else
@@ -331,12 +431,12 @@ test_import() {
     echo '{"theme":"dark"}' > "$IMPORT_SOURCE/settings.json"
     echo "custom data" > "$IMPORT_SOURCE/custom.txt"
 
-    # Create subdirectory (should be skipped)
-    mkdir -p "$IMPORT_SOURCE/logs"
-    echo "log content" > "$IMPORT_SOURCE/logs/test.log"
+    mkdir -p "$IMPORT_SOURCE/skills/demo" "$IMPORT_SOURCE/projects/p"
+    echo "skill" > "$IMPORT_SOURCE/skills/demo/SKILL.md"
+    echo "history" > "$IMPORT_SOURCE/projects/p/session.jsonl"
 
     # Test basic import with confirmation
-    if echo -e "y\ny" | ./cdp create imported --import-from "$IMPORT_SOURCE" --description "Imported profile" 2>/dev/null; then
+    if echo -e "y\ny" | ./hat create imported --import-from "$IMPORT_SOURCE" --description "Imported profile" 2>/dev/null; then
         if [ -d "$HOME/.claude-profiles/imported" ]; then
             pass "Import command created profile directory"
         else
@@ -369,18 +469,23 @@ test_import() {
             fail "Import did not create metadata file"
         fi
 
-        # Verify subdirectories were skipped
-        if [ ! -d "$HOME/.claude-profiles/imported/logs" ]; then
-            pass "Import skipped subdirectories"
+        if [ -f "$HOME/.claude-profiles/imported/skills/demo/SKILL.md" ]; then
+            pass "Import copied subdirectories"
         else
-            fail "Import should skip subdirectories"
+            fail "Import should copy subdirectories"
+        fi
+
+        if [ ! -e "$HOME/.claude-profiles/imported/projects" ]; then
+            pass "Import excluded runtime directories"
+        else
+            fail "Import should exclude runtime directories"
         fi
     else
         fail "Import command failed"
     fi
 
     # Test import with missing source file
-    output=$(./cdp create failed-import --import-from /nonexistent/path 2>&1)
+    output=$(./hat create failed-import --import-from /nonexistent/path 2>&1)
     if echo "$output" | grep -qi "does not exist"; then
         pass "Import handles non-existent source path"
     else
@@ -393,7 +498,7 @@ test_import() {
 
 # Main test execution
 main() {
-    echo -e "${YELLOW}CDP End-to-End Tests${NC}"
+    echo -e "${YELLOW}hat End-to-End Tests${NC}"
     echo "================================"
 
     setup_test_env
@@ -403,6 +508,8 @@ main() {
     test_list
     test_switch
     test_current
+    test_shared_and_plugins
+    test_rule
     test_delete
     test_import
     test_flag_passthrough

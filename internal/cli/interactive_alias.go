@@ -7,9 +7,9 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/tiagokriok/cdp/internal/config"
-	"github.com/tiagokriok/cdp/internal/ui"
-	"github.com/tiagokriok/cdp/pkg/aliases"
+	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/ui"
+	"github.com/tiagokriok/hat/pkg/aliases"
 )
 
 type wizardStep int
@@ -293,7 +293,7 @@ func (m aliasWizardModel) viewReview() string {
 	for profile, alias := range m.aliases {
 		b.WriteString(fmt.Sprintf("  %s → %s\n",
 			ui.SuccessStyle.Render(alias),
-			fmt.Sprintf("cdp %s", profile)))
+			fmt.Sprintf("hat %s", profile)))
 	}
 
 	b.WriteString(fmt.Sprintf("\nShell: %s\n", ui.InfoStyle.Render(m.shellType)))
@@ -307,7 +307,7 @@ func RunAliasWizard() error {
 	// Load config
 	cfg, err := config.Load()
 	if err != nil {
-		return fmt.Errorf("CDP not initialized. Run 'cdp init' first")
+		return fmt.Errorf("hat not initialized. Run 'hat init' first")
 	}
 
 	// Get profiles
@@ -320,7 +320,7 @@ func RunAliasWizard() error {
 	if len(profiles) == 0 {
 		ui.Info("No profiles found.")
 		fmt.Println("Create a profile first:")
-		fmt.Println("  cdp create <name> [description]")
+		fmt.Println("  hat create <name> [description]")
 		return nil
 	}
 
@@ -363,7 +363,7 @@ func RunAliasWizard() error {
 
 		ui.Success("Shell aliases installed!")
 		for profile, alias := range wizardModel.aliases {
-			fmt.Printf("  %s → cdp %s\n", alias, profile)
+			fmt.Printf("  %s → hat %s\n", alias, profile)
 		}
 		fmt.Printf("\nTo activate aliases immediately, run:\n  source %s\n\n", am.GetRCFile())
 		fmt.Println("They will be available in new terminal sessions automatically.")
@@ -378,6 +378,7 @@ func RunAliasWizard() error {
 
 var reservedCommands = map[string]bool{
 	"cd":     true,
+	"hat":    true,
 	"ls":     true,
 	"cp":     true,
 	"mv":     true,

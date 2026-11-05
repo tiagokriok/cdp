@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/tiagokriok/cdp/internal/cli"
+	"github.com/tiagokriok/hat/internal/cli"
 )
 
 var (
@@ -20,12 +20,12 @@ var createCmd = &cobra.Command{
 	Long: `Creates a new profile directory with a default configuration.
 
 Create from scratch with optional template:
-  cdp create work "Work profile" --template restrictive
-  cdp create personal "Personal" --template permissive
+  hat create work "Work profile" --template restrictive
+  hat create personal "Personal" --template permissive
 
 Import existing Claude configuration:
-  cdp create work --import-from ~/.config/claude-code --description "Work profile"
-  cdp create work --import-from ~/backups/claude-2024
+  hat create work --import-from ~/.config/claude-code --description "Work profile"
+  hat create work --import-from ~/backups/claude-2024
 
 Available templates: restrictive, permissive`,
 	Args: cobra.RangeArgs(1, 2), // Expect 1 or 2 arguments

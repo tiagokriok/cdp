@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/tiagokriok/hat/internal/config"
 )
 
 // BackupManager handles profile backup and restore operations
@@ -34,7 +36,7 @@ func NewBackupManager(profilesDir string) (*BackupManager, error) {
 		return nil, fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	backupDir := filepath.Join(homeDir, ".cdp", "backups")
+	backupDir := filepath.Join(homeDir, ".hat", "backups")
 
 	// Ensure backup directory exists
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
@@ -157,6 +159,9 @@ func (bm *BackupManager) Restore(backupPath string, overwrite bool) (string, err
 	}
 	// Profile name is everything except the last two parts (date-time)
 	profileName := strings.Join(parts[:len(parts)-2], "-")
+	if err := config.ValidateName(profileName); err != nil {
+		return "", fmt.Errorf("invalid profile name in backup filename: %w", err)
+	}
 
 	profilePath := filepath.Join(bm.profilesDir, profileName)
 
@@ -187,7 +192,18 @@ func (bm *BackupManager) Restore(backupPath string, overwrite bool) (string, err
 			return "", fmt.Errorf("failed to read tar: %w", err)
 		}
 
-		targetPath := filepath.Join(profilePath, header.Name)
+		targetPath, err := safeJoin(profilePath, header.Name)
+		if err == nil && (header.Typeflag == tar.TypeSymlink || header.Typeflag == tar.TypeLink) {
+			base := profilePath
+			if header.Typeflag == tar.TypeSymlink {
+				base = filepath.Dir(targetPath)
+			}
+			_, err = safeJoin(base, header.Linkname)
+		}
+		if err != nil {
+			os.RemoveAll(profilePath)
+			return "", fmt.Errorf("unsafe entry %q in backup: %w", header.Name, err)
+		}
 
 		switch header.Typeflag {
 		case tar.TypeDir:
@@ -218,6 +234,18 @@ func (bm *BackupManager) Restore(backupPath string, overwrite bool) (string, err
 	}
 
 	return profileName, nil
+}
+
+func safeJoin(base, name string) (string, error) {
+	if filepath.IsAbs(name) || strings.HasPrefix(name, "/") {
+		return "", fmt.Errorf("absolute path not allowed")
+	}
+	target := filepath.Join(base, name)
+	rel, err := filepath.Rel(base, target)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("path escapes profile directory")
+	}
+	return target, nil
 }
 
 // List returns all available backups
