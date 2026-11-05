@@ -18,39 +18,32 @@ func main() {
 	cmd.Execute()
 }
 
-// handleImplicitSwitch checks if the user is trying to run a switch command
-// without explicitly typing 'switch'. e.g., `cdp work`.
-// If so, it injects the 'switch' command into the arguments for Cobra.
 func handleImplicitSwitch() {
-	if len(os.Args) <= 1 {
-		return
+	os.Args = rewriteImplicitSwitch(os.Args)
+}
+
+func rewriteImplicitSwitch(args []string) []string {
+	if len(args) <= 1 {
+		return args
 	}
 
-	// List of all user-facing commands and their aliases.
-	// This determines if the first argument is a command or a profile name.
 	knownCommands := []string{
 		"init", "create", "list", "ls", "delete", "rm",
 		"current", "info", "help", "version", "completion",
 		"templates", "alias", "switch", "clone", "rename", "diff", "backup",
 	}
 
-	firstArg := os.Args[1]
+	firstArg := args[1]
 
-	// If the first argument is a flag, it's not a profile name.
-	if strings.HasPrefix(firstArg, "-") {
-		return
+	if strings.HasPrefix(firstArg, "-") || strings.HasPrefix(firstArg, "__") {
+		return args
 	}
 
-	// If the first argument is a known command, it's not a profile name.
 	for _, known := range knownCommands {
 		if firstArg == known {
-			return
+			return args
 		}
 	}
 
-	// If we're here, the first argument is not a flag and not a known command.
-	// We assume it's a profile name for the 'switch' command.
-	// We inject 'switch' into the os.Args slice.
-	originalArgs := os.Args
-	os.Args = append([]string{originalArgs[0], "switch"}, originalArgs[1:]...)
+	return append([]string{args[0], "switch"}, args[1:]...)
 }
