@@ -22,8 +22,8 @@ func TestRunInteractiveMenu_InitializesWhenNotInitialized(t *testing.T) {
 	_, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	if err := RunInteractiveMenu(); err != nil {
-		t.Fatalf("RunInteractiveMenu() failed: %v", err)
+	if err := RunInteractiveMenu(true); err != nil {
+		t.Fatalf("RunInteractiveMenu(true) failed: %v", err)
 	}
 	if !config.Exists() {
 		t.Error("config should exist after RunInteractiveMenu on a fresh HOME")

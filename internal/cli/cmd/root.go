@@ -17,7 +17,7 @@ enabling seamless switching between different configurations.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			// No arguments provided, so run the interactive menu.
-			return cli.RunInteractiveMenu()
+			return cli.RunInteractiveMenu(noRun)
 		}
 		// If arguments were provided but not handled by a subcommand,
 		// it's an error. The pre-parser in main.go should have

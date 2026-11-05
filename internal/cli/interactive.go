@@ -76,7 +76,7 @@ func (m model) View() string {
 }
 
 // RunInteractiveMenu starts the Bubble Tea TUI to select a profile
-func RunInteractiveMenu() error {
+func RunInteractiveMenu(noRun bool) error {
 	cfg, err := loadConfig()
 	if err != nil {
 		if errors.Is(err, ErrNotInitialized) {
@@ -107,8 +107,8 @@ func RunInteractiveMenu() error {
 
 	if finalModel, ok := m.(model); ok && finalModel.selected {
 		selectedProfile := finalModel.profiles[finalModel.cursor]
-		fmt.Println() // Add a newline for better formatting after TUI exits
-		return HandleSwitch(selectedProfile.Name, []string{}, true)
+		fmt.Println()
+		return HandleSwitch(selectedProfile.Name, []string{}, noRun)
 	}
 
 	return nil
