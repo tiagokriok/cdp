@@ -243,7 +243,7 @@ func HandleSwitch(name string, claudeFlags []string, noRun bool) error {
 	}
 
 	ui.Info("Starting Claude Code...")
-	return exec.Run(profile.Path, claudeFlags)
+	return exec.Run(profile.Path, append(append([]string{}, profile.Metadata.CustomFlags...), claudeFlags...))
 }
 
 // Helper functions
