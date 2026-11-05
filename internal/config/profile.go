@@ -159,7 +159,6 @@ func (pm *ProfileManager) DeleteProfile(name string) error {
 
 	profilePath := filepath.Join(pm.config.ProfilesDir, name)
 
-	// Check if profile exists
 	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
 		return fmt.Errorf("profile '%s' does not exist", name)
 	}
@@ -195,10 +194,8 @@ func (pm *ProfileManager) ListProfiles() ([]Profile, error) {
 			continue
 		}
 
-		// Load metadata
 		metadata, err := pm.loadMetadata(profilePath)
 		if err != nil {
-			// Skip profiles with invalid metadata
 			continue
 		}
 
@@ -209,7 +206,6 @@ func (pm *ProfileManager) ListProfiles() ([]Profile, error) {
 		})
 	}
 
-	// Sort by last used (most recent first), then by name
 	sort.Slice(profiles, func(i, j int) bool {
 		if profiles[i].Metadata.LastUsed.IsZero() && profiles[j].Metadata.LastUsed.IsZero() {
 			return profiles[i].Name < profiles[j].Name
@@ -234,12 +230,10 @@ func (pm *ProfileManager) GetProfile(name string) (*Profile, error) {
 
 	profilePath := filepath.Join(pm.config.ProfilesDir, name)
 
-	// Check if profile exists
 	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("profile '%s' does not exist", name)
 	}
 
-	// Load metadata
 	metadata, err := pm.loadMetadata(profilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load profile metadata: %w", err)
@@ -266,12 +260,14 @@ func (pm *ProfileManager) UpdateLastUsed(name string) error {
 
 // ValidateProfile checks if a profile directory structure is valid
 func (pm *ProfileManager) ValidateProfile(profile *Profile) error {
-	// Check if directory exists
 	if _, err := os.Stat(profile.Path); os.IsNotExist(err) {
 		return fmt.Errorf("profile directory does not exist")
 	}
 
-	// Check if required files exist
+	if IsDefaultClaudeDir(profile.Path) {
+		return nil
+	}
+
 	requiredFiles := []string{MetadataFileName, ClaudeConfigFile, ClaudeSettingsFile}
 	for _, file := range requiredFiles {
 		filePath := filepath.Join(profile.Path, file)
@@ -289,6 +285,9 @@ func (pm *ProfileManager) loadMetadata(profilePath string) (ProfileMetadata, err
 
 	data, err := os.ReadFile(metadataPath)
 	if err != nil {
+		if os.IsNotExist(err) && IsDefaultClaudeDir(profilePath) {
+			return ProfileMetadata{}, nil
+		}
 		return ProfileMetadata{}, fmt.Errorf("failed to read metadata file: %w", err)
 	}
 
@@ -303,6 +302,9 @@ func (pm *ProfileManager) loadMetadata(profilePath string) (ProfileMetadata, err
 // saveMetadata saves profile metadata to disk
 func (pm *ProfileManager) saveMetadata(profilePath string, metadata ProfileMetadata) error {
 	metadataPath := filepath.Join(profilePath, MetadataFileName)
+	if metadata.CreatedAt.IsZero() {
+		metadata.CreatedAt = time.Now()
+	}
 
 	data, err := json.MarshalIndent(metadata, "", "  ")
 	if err != nil {

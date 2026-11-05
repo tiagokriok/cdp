@@ -141,3 +141,29 @@ func TestHandleSwitch_SyncsSharedLayer(t *testing.T) {
 		t.Errorf("switch should sync shared links: %v", err)
 	}
 }
+
+func TestHandleSwitch_DefaultProfileWithoutMetadata(t *testing.T) {
+	tmpDir, cleanup := setupTestEnv(t)
+	defer cleanup()
+	if err := config.Init(); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defaultDir := filepath.Join(tmpDir, ".claude")
+	if err := os.MkdirAll(defaultDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(defaultDir, filepath.Join(cfg.ProfilesDir, "work")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := HandleSwitch("work", nil, true); err != nil {
+		t.Fatalf("HandleSwitch() error = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(defaultDir, config.MetadataFileName)); err != nil {
+		t.Errorf("metadata should be created: %v", err)
+	}
+}

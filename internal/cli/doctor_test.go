@@ -189,3 +189,22 @@ func TestHandleDoctor_NotInitialized(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestHandleDoctor_DefaultProfileBareDir(t *testing.T) {
+	home := setupDoctor(t)
+	def := filepath.Join(home, ".claude")
+	if err := os.MkdirAll(def, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(def, filepath.Join(home, ".claude-profiles", "work")); err != nil {
+		t.Fatal(err)
+	}
+	var err error
+	out := captureStdout(t, func() { err = HandleDoctor() })
+	if err != nil {
+		t.Fatalf("err = %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "structure valid") {
+		t.Errorf("default profile should be valid:\n%s", out)
+	}
+}
