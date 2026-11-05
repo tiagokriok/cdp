@@ -66,7 +66,11 @@ func Ask(question string, defaultYes bool) bool {
 	if reader == nil {
 		reader = bufio.NewReader(os.Stdin)
 	}
-	line, _ := reader.ReadString('\n')
+	line, err := reader.ReadString('\n')
+	if err != nil && line == "" {
+		fmt.Println()
+		return false
+	}
 	line = strings.TrimSpace(strings.ToLower(line))
 	if line == "" {
 		return defaultYes

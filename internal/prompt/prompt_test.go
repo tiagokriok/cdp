@@ -25,16 +25,23 @@ func TestSharedReaderAnswersPromptsInOrder(t *testing.T) {
 	}
 }
 
-func TestEmptyLineAndEOFUseDefault(t *testing.T) {
+func TestEmptyLineUsesDefaultAndEOFSaysNo(t *testing.T) {
 	setup(t, "\n")
 	if !Ask("a", true) {
 		t.Error("empty line should return default yes")
 	}
-	if !Ask("b", true) {
-		t.Error("EOF should return default yes")
+	if Ask("b", true) {
+		t.Error("EOF should return no even when default is yes")
 	}
 	if Ask("c", false) {
-		t.Error("EOF should return default no")
+		t.Error("EOF should return no")
+	}
+}
+
+func TestLastLineWithoutNewlineIsRead(t *testing.T) {
+	setup(t, "y")
+	if !Ask("a", false) {
+		t.Error("answer without trailing newline should be read")
 	}
 }
 
