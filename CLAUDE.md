@@ -22,7 +22,7 @@ go test -v ./...        # Run tests with verbose output
 go test -v ./internal/config/          # Test specific package
 go test -run TestCreateProfile ./...   # Run specific test
 make coverage           # Generate HTML coverage report
-bash scripts/e2e_test.sh               # Run E2E tests (36 checks)
+bash scripts/e2e_test.sh               # Run E2E tests (48 checks)
 ```
 
 ### Development
@@ -182,6 +182,14 @@ Commands return errors up to `main()`, which prints to stderr and exits with cod
 - **Unit tests**: Table-driven tests in `*_test.go` files, focus on config and parser
 - **E2E tests**: `scripts/e2e_test.sh` tests full lifecycle in isolated temp directory
 - **No mocking**: Tests use `t.TempDir()` and real file operations with temporary HOME override
+
+## Extra Commands
+
+- **Config package files**: `internal/config/shared.go` (shared layer in `~/.hat/shared`, per-entry symlinks, opt-in via `Shared` in metadata), `plugins.go` (per-profile plugins, not symlinked), `rules.go` (directory rules in `config.yaml`), `claudejson.go` (`ClaudeJSONPath`, `~/.claude.json` for the default profile), `copy.go` (import/clone copier).
+- **CLI files**: `internal/cli/doctor.go` (`hat doctor`, exit 1 on failure), `mcp.go` (`hat mcp`, read-only, URLs reduced to `scheme://host` or `(redacted url)`, never secrets), `rules.go` (`hat rule`, bare `hat` launches the rule's profile, longest path wins).
+- **Shared**: `hat shared add|link|unlink|sync|list`. Kinds: skills, agents, commands, output-styles, rules, CLAUDE.md. Profile's own entry wins; sync prunes dangling links and runs on every launch.
+- **Plugins**: `hat plugins [profile]`, `enable|disable`, `copy` (copies marketplace to `extraKnownMarketplaces` and enables), `diff`. Mods follow the same scoping.
+- **Default profile**: a profile symlinked to `~/.claude` is valid if the dir exists. Missing `.metadata.json` loads as empty and is created on the first write. Non-default profiles still require it.
 
 ## Migrating from cdp
 
