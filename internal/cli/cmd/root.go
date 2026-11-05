@@ -6,10 +6,14 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tiagokriok/hat/internal/cli"
 	"github.com/tiagokriok/hat/internal/config"
+	"github.com/tiagokriok/hat/internal/prompt"
 	"github.com/tiagokriok/hat/internal/ui"
 )
 
-var noRun bool
+var (
+	noRun bool
+	yes   bool
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "hat",
@@ -17,6 +21,7 @@ var rootCmd = &cobra.Command{
 	Long: `hat, Claude Code profile switcher is a Go CLI tool that manages multiple Claude Code profiles,
 enabling seamless switching between different configurations.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		prompt.SetAssumeYes(yes)
 		migrated, err := config.MigrateLegacyConfigDir()
 		if err != nil {
 			return err
@@ -44,6 +49,7 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&noRun, "no-run", false, "Switch profile without running Claude")
+	rootCmd.PersistentFlags().BoolVarP(&yes, "yes", "y", false, "Auto-confirm prompts")
 }
 
 // GetRootCmd returns the root command for testing purposes
@@ -54,4 +60,6 @@ func GetRootCmd() *cobra.Command {
 // ResetRootCmd resets the root command state for testing
 func ResetRootCmd() {
 	noRun = false
+	yes = false
+	prompt.SetAssumeYes(false)
 }

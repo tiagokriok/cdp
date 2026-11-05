@@ -1,9 +1,9 @@
 package config
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/tiagokriok/hat/internal/prompt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -538,7 +538,7 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 
 	if profileExists {
 		fmt.Printf("\n⚠ Profile '%s' already exists!\n", name)
-		if !promptYesNo("Overwrite existing profile?", false) {
+		if !prompt.Confirm("Overwrite existing profile?", false) {
 			return fmt.Errorf("import cancelled by user")
 		}
 		if err := os.RemoveAll(destPath); err != nil {
@@ -546,7 +546,7 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 		}
 	}
 
-	if !promptYesNo("\nProceed with import?", true) {
+	if !prompt.Confirm("\nProceed with import?", true) {
 		return fmt.Errorf("import cancelled by user")
 	}
 
@@ -609,7 +609,7 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 	fmt.Printf("  ✓ Created %s\n", MetadataFileName)
 
 	fmt.Printf("\nℹ Original files are still in: %s\n", absSourcePath)
-	if promptYesNo("Remove original files?", false) {
+	if prompt.Ask("Remove original files?", false) {
 		if err := os.RemoveAll(absSourcePath); err != nil {
 			fmt.Printf("⚠ Failed to remove original files: %v\n", err)
 			fmt.Println("You can manually delete them later")
@@ -619,31 +619,4 @@ func (pm *ProfileManager) ImportProfile(sourcePath, name, description string) er
 	}
 
 	return nil
-}
-
-func PromptYesNo(question string, defaultYes bool) bool {
-	return promptYesNo(question, defaultYes)
-}
-
-func promptYesNo(question string, defaultYes bool) bool {
-	defaultChoice := "y/N"
-	if defaultYes {
-		defaultChoice = "Y/n"
-	}
-
-	fmt.Printf("%s [%s]: ", question, defaultChoice)
-
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return false
-	}
-
-	input = strings.TrimSpace(strings.ToLower(input))
-
-	if input == "" {
-		return defaultYes
-	}
-
-	return input == "y" || input == "yes"
 }

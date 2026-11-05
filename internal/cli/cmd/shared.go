@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/tiagokriok/hat/internal/prompt"
 	"maps"
 	"slices"
 	"sort"
@@ -143,7 +144,7 @@ var sharedAddCmd = &cobra.Command{
 		if err := config.ValidateSharedKind(args[0]); err != nil {
 			return err
 		}
-		if !config.PromptYesNo(fmt.Sprintf("Move %s into the shared layer and replace it with a symlink?", args[1]), false) {
+		if !prompt.Confirm(fmt.Sprintf("Move %s into the shared layer and replace it with a symlink?", args[1]), false) {
 			ui.Info("Cancelled")
 			return nil
 		}

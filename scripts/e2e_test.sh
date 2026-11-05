@@ -436,7 +436,7 @@ test_import() {
     echo "history" > "$IMPORT_SOURCE/projects/p/session.jsonl"
 
     # Test basic import with confirmation
-    if echo -e "y\ny" | ./hat create imported --import-from "$IMPORT_SOURCE" --description "Imported profile" 2>/dev/null; then
+    if printf "y\nn\n" | ./hat create imported --import-from "$IMPORT_SOURCE" --description "Imported profile" 2>/dev/null; then
         if [ -d "$HOME/.claude-profiles/imported" ]; then
             pass "Import command created profile directory"
         else
@@ -482,6 +482,32 @@ test_import() {
         fi
     else
         fail "Import command failed"
+    fi
+
+    if printf 'y\ny\nn\n' | ./hat create imported --import-from "$IMPORT_SOURCE" >/dev/null 2>&1 && [ -d "$IMPORT_SOURCE" ]; then
+        pass "Piped stdin answers overwrite, proceed and keep-originals prompts in order"
+    else
+        fail "Piped stdin should answer every prompt in order"
+    fi
+
+    if printf 'y\ny\ny\n' | ./hat create imported-rm --import-from "$IMPORT_SOURCE" >/dev/null 2>&1 && [ ! -d "$IMPORT_SOURCE" ]; then
+        pass "Third piped answer removes original files"
+        mkdir -p "$IMPORT_SOURCE"
+        echo '{}' > "$IMPORT_SOURCE/.claude.json"
+    else
+        fail "Third piped answer should remove original files"
+    fi
+
+    if ./hat --yes create imported-yes --import-from "$IMPORT_SOURCE" </dev/null >/dev/null 2>&1 && [ -d "$HOME/.claude-profiles/imported-yes" ] && [ -d "$IMPORT_SOURCE" ]; then
+        pass "--yes imports without prompts and keeps original files"
+    else
+        fail "--yes should import without prompts and keep original files"
+    fi
+
+    if ./hat delete imported-yes -y </dev/null >/dev/null 2>&1 && [ ! -d "$HOME/.claude-profiles/imported-yes" ]; then
+        pass "-y auto-confirms delete"
+    else
+        fail "-y should auto-confirm delete"
     fi
 
     # Test import with missing source file

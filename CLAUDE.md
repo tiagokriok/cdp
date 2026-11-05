@@ -95,7 +95,7 @@ Users can import existing Claude Code configurations into hat using `hat create 
 
 **Key Implementation Details** (`internal/config/profile.go`):
 - `ImportProfile(sourcePath, name, description string) error` - Main import method
-- `promptYesNo(question string, defaultYes bool) bool` - Helper for interactive yes/no prompts
+- `prompt.Ask(question string, defaultYes bool) bool` (`internal/prompt`) - single shared-stdin yes/no prompt used by every caller
 - Absolute paths to the source `plugins/` dir in `plugins/installed_plugins.json` and `plugins/known_marketplaces.json` are rewritten to the destination
 - Template and customFlags from the source `.metadata.json` are preserved
 - All errors trigger cleanup (destination directory removed)
@@ -166,7 +166,7 @@ hat now leverages the [Cobra](https://cobra.dev/) CLI framework for robust argum
 -   **Commands**: `init`, `create`, `list` (`ls`), `delete` (`rm`), `current`, `info`, `clone`, `rename`, `diff`, `templates`, `alias`, `backup`, `completion`, `help`, `version`, `switch` (hidden).
 -   **Implicit Switch**: Any unknown first argument (not a subcommand or a flag) is treated as a profile name for an implicit `switch` command. The `main.go` pre-parser automatically injects the `switch` subcommand (e.g., `hat work` is internally executed as `hat switch work`).
 -   **Interactive Mode**: Running `hat` without any arguments or flags launches an interactive TUI menu for profile selection.
--   `--no-run` flag is consumed by hat, all other flags pass through to Claude.
+-   `--no-run` and `--yes`/`-y` are consumed by hat, all other flags pass through to Claude. `--yes` makes `prompt.Confirm` return yes without reading stdin; `prompt.Ask` (import's "remove original files") keeps its default.
 
 Example: `hat work --continue --verbose --no-run`
 -   This command is pre-parsed by `main.go` into `hat switch work --continue --verbose --no-run`.
