@@ -41,6 +41,13 @@ make install
 
 Installs to `~/.local/bin/hat`.
 
+## Migrating from cdp
+
+- `~/.cdp` moves to `~/.hat` automatically on the first `hat` run. Profiles are not touched.
+- Old `# cdp-aliases` blocks are still listed and are replaced by `hat` ones on the next `hat alias install` (`hat alias uninstall` removes them).
+- Run `make install` and delete the old binary: `rm ~/.local/bin/cdp`.
+- The env var passed to Claude is now `HAT_PROFILE` (was `CLAUDE_PROFILE`).
+
 ## Quick Start
 
 ```bash

@@ -183,6 +183,10 @@ Commands return errors up to `main()`, which prints to stderr and exits with cod
 - **E2E tests**: `scripts/e2e_test.sh` tests full lifecycle in isolated temp directory
 - **No mocking**: Tests use `t.TempDir()` and real file operations with temporary HOME override
 
+## Migrating from cdp
+
+`config.MigrateLegacyConfigDir()` (run from the root command's `PersistentPreRunE`) renames `~/.cdp` to `~/.hat` when `~/.hat` is absent. `pkg/aliases` recognizes the legacy `# cdp-aliases` block and replaces or removes it. Env var is `HAT_PROFILE`.
+
 ## Important Constraints
 
 1. **Profile name validation**: Only alphanumeric, hyphens, underscores, max 50 chars (see `profileNamePattern` regex in `internal/config/profile.go`)
