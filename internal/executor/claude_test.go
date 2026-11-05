@@ -35,12 +35,12 @@ func TestFindClaude_WithSetPath(t *testing.T) {
 	e.SetClaudePath(expectedPath)
 
 	// findClaude should return the set path
-	path, err := e.findClaude()
+	path, err := e.FindClaude()
 	if err != nil {
-		t.Fatalf("findClaude() error = %v, want nil", err)
+		t.Fatalf("FindClaude() error = %v, want nil", err)
 	}
 	if path != expectedPath {
-		t.Errorf("findClaude() = %q, want %q", path, expectedPath)
+		t.Errorf("FindClaude() = %q, want %q", path, expectedPath)
 	}
 }
 
@@ -64,12 +64,12 @@ func TestFindClaude_InPath(t *testing.T) {
 	os.Setenv("PATH", tmpDir+":"+originalPath)
 	defer os.Setenv("PATH", originalPath)
 
-	path, err := e.findClaude()
+	path, err := e.FindClaude()
 	if err != nil {
-		t.Fatalf("findClaude() error = %v, want nil", err)
+		t.Fatalf("FindClaude() error = %v, want nil", err)
 	}
 	if path != claudePath {
-		t.Errorf("findClaude() = %q, want %q", path, claudePath)
+		t.Errorf("FindClaude() = %q, want %q", path, claudePath)
 	}
 }
 
@@ -110,12 +110,12 @@ func TestFindClaude_CommonLocations(t *testing.T) {
 	os.Setenv("PATH", "")
 	defer os.Setenv("PATH", originalPath)
 
-	path, err := e.findClaude()
+	path, err := e.FindClaude()
 	if err != nil {
-		t.Fatalf("findClaude() error = %v, want nil", err)
+		t.Fatalf("FindClaude() error = %v, want nil", err)
 	}
 	if path != claudePath {
-		t.Errorf("findClaude() = %q, want %q", path, claudePath)
+		t.Errorf("FindClaude() = %q, want %q", path, claudePath)
 	}
 }
 
@@ -139,7 +139,7 @@ func TestFindClaude_NotFound(t *testing.T) {
 	os.Setenv("HOME", tmpHome)
 	defer os.Setenv("HOME", originalHome)
 
-	_, err := e.findClaude()
+	_, err := e.FindClaude()
 	if err == nil {
 		// It's possible claude is found through other means,
 		// so we just verify the function doesn't panic

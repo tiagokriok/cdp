@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -10,6 +11,8 @@ import (
 	"github.com/tiagokriok/cdp/internal/executor"
 	"github.com/tiagokriok/cdp/internal/ui"
 )
+
+var ErrNotInitialized = errors.New("CDP is not initialized. Run 'cdp init' first")
 
 // HandleInit initializes the CDP configuration
 func HandleInit() error {
@@ -204,26 +207,28 @@ func HandleSwitch(name string, claudeFlags []string, noRun bool) error {
 
 	pm := config.NewProfileManager(cfg)
 
-	// Check if profile exists
 	profile, err := pm.GetProfile(name)
 	if err != nil {
 		return fmt.Errorf("profile '%s' does not exist", name)
 	}
 
-	// Validate profile structure
 	if err := pm.ValidateProfile(profile); err != nil {
 		return fmt.Errorf("profile '%s' is corrupted: %w", name, err)
 	}
 
-	// Update current profile by setting field and saving explicitly
+	exec := executor.NewExecutor()
+	if !noRun {
+		if _, err := exec.FindClaude(); err != nil {
+			return err
+		}
+	}
+
 	cfg.CurrentProfile = name
 	if err := cfg.Save(); err != nil {
 		return fmt.Errorf("failed to save config with new profile: %w", err)
 	}
 
-	// Update last used timestamp
 	if err := pm.UpdateLastUsed(name); err != nil {
-		// Non-fatal error, just log it
 		ui.Warn(fmt.Sprintf("Failed to update last used timestamp: %v", err))
 	}
 
@@ -234,9 +239,7 @@ func HandleSwitch(name string, claudeFlags []string, noRun bool) error {
 		return nil
 	}
 
-	// Run Claude Code
 	ui.Info("Starting Claude Code...")
-	exec := executor.NewExecutor()
 	return exec.Run(profile.Path, claudeFlags)
 }
 
@@ -244,7 +247,7 @@ func HandleSwitch(name string, claudeFlags []string, noRun bool) error {
 
 func loadConfig() (*config.Config, error) {
 	if !config.Exists() {
-		return nil, fmt.Errorf("CDP is not initialized. Run 'cdp init' first")
+		return nil, ErrNotInitialized
 	}
 	return config.Load()
 }
