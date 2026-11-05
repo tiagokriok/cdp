@@ -331,9 +331,9 @@ test_import() {
     echo '{"theme":"dark"}' > "$IMPORT_SOURCE/settings.json"
     echo "custom data" > "$IMPORT_SOURCE/custom.txt"
 
-    # Create subdirectory (should be skipped)
-    mkdir -p "$IMPORT_SOURCE/logs"
-    echo "log content" > "$IMPORT_SOURCE/logs/test.log"
+    mkdir -p "$IMPORT_SOURCE/skills/demo" "$IMPORT_SOURCE/projects/p"
+    echo "skill" > "$IMPORT_SOURCE/skills/demo/SKILL.md"
+    echo "history" > "$IMPORT_SOURCE/projects/p/session.jsonl"
 
     # Test basic import with confirmation
     if echo -e "y\ny" | ./cdp create imported --import-from "$IMPORT_SOURCE" --description "Imported profile" 2>/dev/null; then
@@ -369,11 +369,16 @@ test_import() {
             fail "Import did not create metadata file"
         fi
 
-        # Verify subdirectories were skipped
-        if [ ! -d "$HOME/.claude-profiles/imported/logs" ]; then
-            pass "Import skipped subdirectories"
+        if [ -f "$HOME/.claude-profiles/imported/skills/demo/SKILL.md" ]; then
+            pass "Import copied subdirectories"
         else
-            fail "Import should skip subdirectories"
+            fail "Import should copy subdirectories"
+        fi
+
+        if [ ! -e "$HOME/.claude-profiles/imported/projects" ]; then
+            pass "Import excluded runtime directories"
+        else
+            fail "Import should exclude runtime directories"
         fi
     else
         fail "Import command failed"
