@@ -189,6 +189,47 @@ test_current() {
 }
 
 # Test delete command
+test_shared_and_plugins() {
+    test_section "Testing shared layer and plugins"
+
+    mkdir -p "$HOME/.hat/shared/skills/demo"
+    echo "demo" > "$HOME/.hat/shared/skills/demo/SKILL.md"
+
+    ./hat shared link work skills > /dev/null 2>&1
+    if [ -L "$HOME/.claude-profiles/work/skills/demo" ]; then
+        pass "shared link creates symlink"
+    else
+        fail "shared link did not create symlink"
+    fi
+
+    rm -rf "$HOME/.hat/shared/skills/demo"
+    ./hat shared sync work > /dev/null 2>&1
+    if [ ! -e "$HOME/.claude-profiles/work/skills/demo" ] && [ ! -L "$HOME/.claude-profiles/work/skills/demo" ]; then
+        pass "shared sync prunes dangling symlink"
+    else
+        fail "shared sync left dangling symlink"
+    fi
+
+    ./hat shared unlink work skills > /dev/null 2>&1
+    if ! grep -q "\"shared\"" "$HOME/.claude-profiles/work/.metadata.json"; then
+        pass "shared unlink removes opt-in"
+    else
+        fail "shared unlink did not remove opt-in"
+    fi
+
+    if ./hat plugins enable work demo@market > /dev/null 2>&1 && ./hat plugins work | grep -q "demo@market  *yes"; then
+        pass "plugins enable"
+    else
+        fail "plugins enable failed"
+    fi
+
+    if ./hat plugins disable work demo@market > /dev/null 2>&1 && ./hat plugins work | grep -q "demo@market  *no"; then
+        pass "plugins disable"
+    else
+        fail "plugins disable failed"
+    fi
+}
+
 test_delete() {
     test_section "Testing delete command"
 
@@ -408,6 +449,7 @@ main() {
     test_list
     test_switch
     test_current
+    test_shared_and_plugins
     test_delete
     test_import
     test_flag_passthrough
