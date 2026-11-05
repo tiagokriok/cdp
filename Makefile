@@ -3,7 +3,7 @@
 BINARY_NAME=cdp
 INSTALL_PATH=$(HOME)/.local/bin
 GO=go
-VERSION?=0.1.0
+VERSION?=$(shell git describe --tags --always 2>/dev/null || echo dev)
 
 ## help: Display this help message
 help:

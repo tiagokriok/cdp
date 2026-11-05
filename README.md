@@ -10,10 +10,12 @@ CDP solves the problem of managing different Claude Code configurations for work
 
 - **Profile Management** - Create, list, delete, clone, rename, and compare profiles
 - **Implicit Switching** - `cdp work` switches and launches Claude in one step
-- **Interactive TUI** - Visual profile selector with arrow key / vim navigation
+- **Interactive TUI** - Visual profile selector with arrow key / vim navigation. Selecting a profile launches Claude (`cdp --no-run` only switches)
 - **Interactive Alias Wizard** - Guided TUI for setting up shell aliases with smart suggestions
 - **Templates** - Pre-configured settings (restrictive / permissive) applied on creation
-- **Import Existing Config** - Migrate your existing Claude Code configuration into CDP
+- **Import Existing Config** - Migrate your existing Claude Code configuration, including skills, agents, commands and plugins, into CDP
+- **Default Profile** - A profile symlinked to `~/.claude` runs Claude without `CLAUDE_CONFIG_DIR`, so it keeps using `~/.claude.json`
+- **Custom Flags** - `customFlags` in a profile's `.metadata.json` are passed to Claude before your own flags
 - **Backup & Restore** - Full profile backup with tar.gz compression
 - **Shell Aliases** - Quick profile switching via custom shell aliases (bash/zsh/fish)
 - **Shell Completion** - Auto-completion for bash, zsh, fish, and PowerShell
@@ -61,7 +63,7 @@ cdp work --continue
 # Switch without running Claude
 cdp work --no-run
 
-# Interactive profile selector (no arguments)
+# Interactive profile selector (no arguments), launches Claude on select
 cdp
 
 # Clone, rename, compare
@@ -109,11 +111,16 @@ cdp alias install
 |---|---|---|
 | `--no-run`, `-nr` | `switch` / implicit | Switch profile without launching Claude |
 | `--template`, `-t` | `create` | Apply template (restrictive/permissive) |
-| `--import-from` | `create` | Import existing Claude config directory |
+| `--import-from` | `create` | Import existing Claude config directory (copies subdirectories, excludes runtime/cache/history such as `projects`, `todos`, `cache`, `history.jsonl`; symlinks skipped) |
 | `--description`, `-d` | `create` | Profile description |
 | `--overwrite` | `backup restore` | Overwrite existing profile on restore |
 
 All other flags are passed through to Claude Code (e.g. `--continue`, `--verbose`, `--model`).
+
+### Notes
+
+- `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and `CLAUDE_CODE_OAUTH_TOKEN` in your environment override the profile's login. CDP warns (names only) when any is set.
+- To use your existing `~/.claude` as a profile: `ln -s ~/.claude ~/.claude-profiles/work`. The directory must contain `.metadata.json`, `.claude.json` and `settings.json` (CDP validates them), but Claude itself keeps using `~/.claude.json`.
 
 ## Architecture
 
@@ -124,7 +131,7 @@ User → main.go (pre-parser) → Cobra CLI → Command Handler → ProfileManag
 - **Entry point** (`cmd/cdp/main.go`): Pre-parses args to handle implicit switching (`cdp work` becomes `cdp switch work`)
 - **CLI layer** (`internal/cli/`): Cobra commands, business logic handlers, Bubble Tea TUI
 - **Config layer** (`internal/config/`): Global config, profile CRUD, embedded templates
-- **Executor** (`internal/executor/`): Finds Claude binary, sets `CLAUDE_CONFIG_DIR`, execs
+- **Executor** (`internal/executor/`): Finds Claude binary, sets `CLAUDE_CONFIG_DIR` (except for the default `~/.claude` profile), execs
 - **UI** (`internal/ui/`): Styled terminal output with lipgloss
 - **Aliases** (`pkg/aliases/`): Shell alias management (bash/zsh/fish)
 - **Backup** (`internal/backup/`): tar.gz backup/restore
@@ -142,6 +149,7 @@ internal/
   config/
     config.go             # Global config (~/.cdp/config.yaml)
     profile.go            # Profile operations
+    copy.go               # Import/clone copier and exclusion list
     templates.go          # Template system (embedded JSON)
     templates/            # Built-in template files
   executor/claude.go      # Claude Code execution
@@ -174,7 +182,7 @@ currentProfile: work
 }
 ```
 
-Each profile directory also contains `.claude.json` (OAuth) and `settings.json` (Claude settings), both managed by Claude Code itself.
+Each profile directory also contains `.claude.json` and `settings.json`, managed by Claude Code. CDP writes `settings.json` only when applying a template.
 
 ## Dependencies
 
@@ -202,7 +210,7 @@ make test               # Run unit tests
 make coverage           # HTML coverage report
 make lint               # Format + vet
 make dev                # Run without building
-bash scripts/e2e_test.sh  # Run E2E tests
+bash scripts/e2e_test.sh  # Run E2E tests (36 checks)
 ```
 
 ## Roadmap
@@ -214,6 +222,7 @@ See [PLAN.md](PLAN.md) for the full implementation roadmap.
 - **v1.0.0** - Advanced features: templates, aliases, clone, rename, diff, backup, completions
 - **v1.1.0** - Interactive alias wizard with TUI
 - **v1.1.1** - Bug fix: Claude flag passthrough
+- **Unreleased** - Default `~/.claude` profile, subdirectory import/clone, TUI launches Claude, customFlags, auth env warning
 
 ## Contributing
 
