@@ -57,13 +57,10 @@ func (s mcpServer) kind() string {
 
 func redactURL(raw string) string {
 	u, err := url.Parse(raw)
-	if err != nil {
-		return "(unparseable url)"
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Opaque != "" || u.Host == "" {
+		return "(redacted url)"
 	}
-	u.User = nil
-	u.RawQuery = ""
-	u.Fragment = ""
-	return u.String()
+	return u.Scheme + "://" + u.Host
 }
 
 func (s mcpServer) target() string {

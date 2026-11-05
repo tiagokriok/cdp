@@ -12,7 +12,7 @@ import (
 const secretsA = `{
   "mcpServers": {
     "local": {"command": "npx", "args": ["-y", "pkg", "--token=ARGSECRET"], "env": {"API_KEY": "ENVSECRET", "OTHER": "x"}},
-    "remote": {"type": "http", "url": "https://mcp.example.com/v1?key=URLSECRET", "headers": {"Authorization": "Bearer HEADERSECRET"}},
+    "remote": {"type": "http", "url": "https://mcp.example.com/PATHSECRET/v1?key=URLSECRET", "headers": {"Authorization": "Bearer HEADERSECRET"}},
     "stream": {"type": "sse", "url": "https://sse.example.com/"},
     "same": {"command": "a"},
     "onlya": {"command": "z"}
@@ -26,7 +26,7 @@ const secretsA = `{
 const secretsB = `{
   "mcpServers": {
     "local": {"command": "npx", "args": ["-y", "pkg", "--token=OTHERSECRET"], "env": {"API_KEY": "ENVSECRET2"}},
-    "remote": {"type": "http", "url": "https://mcp.example.com/v1?key=URLSECRET", "headers": {"Authorization": "Bearer HEADERSECRET"}},
+    "remote": {"type": "http", "url": "https://mcp.example.com/PATHSECRET/v1?key=URLSECRET", "headers": {"Authorization": "Bearer HEADERSECRET"}},
     "same": {"command": "a"},
     "onlyb": {"type": "http", "url": "https://b.example.com"}
   }
@@ -78,8 +78,8 @@ func TestHandleMCP_ListsUserScope(t *testing.T) {
 	assertNoSecrets(t, out)
 	for _, want := range []string{
 		"local", "stdio", "npx", "env: API_KEY, OTHER",
-		"remote", "http", "https://mcp.example.com/v1", "headers: Authorization",
-		"stream", "sse", "https://sse.example.com/",
+		"remote", "http", "https://mcp.example.com", "headers: Authorization",
+		"stream", "sse", "https://sse.example.com",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)
@@ -172,5 +172,26 @@ func TestHandleMCPDiff_UnknownProfile(t *testing.T) {
 	setupMCP(t)
 	if err := HandleMCPDiff("a", "ghost"); err == nil {
 		t.Error("unknown profile should fail")
+	}
+}
+
+func TestRedactURL(t *testing.T) {
+	cases := map[string]string{
+		"https://u:p@mcp.example.com:8443/tok/sse?k=v#f": "https://mcp.example.com:8443",
+		"http://localhost:3000/mcp":                      "http://localhost:3000",
+		"ftp://host/tok":                                 "(redacted url)",
+		"mailto:tok@example.com":                         "(redacted url)",
+		"https:///tok":                                   "(redacted url)",
+		"not a url":                                      "(redacted url)",
+		"https://%zz/tok":                                "(redacted url)",
+	}
+	for in, want := range cases {
+		got := redactURL(in)
+		if got != want {
+			t.Errorf("redactURL(%q) = %q, want %q", in, got, want)
+		}
+		if strings.Contains(got, "tok") && !strings.Contains(want, "tok") {
+			t.Errorf("leak in %q", got)
+		}
 	}
 }
